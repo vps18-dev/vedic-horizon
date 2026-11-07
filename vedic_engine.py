@@ -17,20 +17,89 @@ def _safe_drik_vaara(jd, place=None, show_vedic_day=True):
     return _orig_drik_vaara(jd, place, show_vedic_day)
 drik.vaara = _safe_drik_vaara
 
+# Monkeypatch drik.sunrise, sunset, moonrise, moonset to strip any (+...) day-offset artifacts
+_orig_drik_sunrise = drik.sunrise
+def _safe_drik_sunrise(jd, place):
+    res = _orig_drik_sunrise(jd, place)
+    lt = res[0] % 24.0 if isinstance(res[0], (int, float)) else 6.0
+    time_str = str(res[1]).split('(')[0].strip()
+    return [lt, time_str, res[2]]
+drik.sunrise = _safe_drik_sunrise
+
+_orig_drik_sunset = drik.sunset
+def _safe_drik_sunset(jd, place):
+    res = _orig_drik_sunset(jd, place)
+    lt = res[0] % 24.0 if isinstance(res[0], (int, float)) else 18.0
+    time_str = str(res[1]).split('(')[0].strip()
+    return [lt, time_str, res[2]]
+drik.sunset = _safe_drik_sunset
+
+_orig_drik_moonrise = drik.moonrise
+def _safe_drik_moonrise(jd, place):
+    res = _orig_drik_moonrise(jd, place)
+    lt = res[0] % 24.0 if isinstance(res[0], (int, float)) else 0.0
+    time_str = str(res[1]).split('(')[0].strip()
+    return [lt, time_str, res[2]]
+drik.moonrise = _safe_drik_moonrise
+
+_orig_drik_moonset = drik.moonset
+def _safe_drik_moonset(jd, place):
+    res = _orig_drik_moonset(jd, place)
+    lt = res[0] % 24.0 if isinstance(res[0], (int, float)) else 0.0
+    time_str = str(res[1]).split('(')[0].strip()
+    return [lt, time_str, res[2]]
+drik.moonset = _safe_drik_moonset
+
+# Monkeypatch drik.upagraha_longitude to safely use float hours and avoid fragile string splitting
+_orig_upagraha_longitude = drik.upagraha_longitude
+def _safe_upagraha_longitude(dob, tob, place, planet_index, divisional_chart_factor=1, chart_method=1, upagraha_part='middle', dhasa_progression_correction=0.0):
+    try:
+        from jhora import utils, const
+        if isinstance(dob, (list, tuple)):
+            dob = drik.Date(int(dob[0]), int(dob[1]), int(dob[2]))
+        jd_utc = utils.gregorian_to_jd(drik.Date(dob.year, dob.month, dob.day))
+        jd = utils.julian_day_number(drik.Date(dob.year, dob.month, dob.day), (int(tob[0]), int(tob[1]), int(tob[2])))
+        day_number = drik.vaara(jd, place)
+        
+        srise = float(drik.sunrise(jd_utc, place)[0])
+        sset = float(drik.sunset(jd_utc, place)[0])
+        planet_part = const.day_rulers[day_number].index(planet_index)
+        tob_hrs = tob[0] + tob[1] / 60.0 + tob[2] / 3600.0
+        
+        if tob_hrs < srise:
+            sset = float(drik.sunset(jd_utc - 1, place)[0])
+            planet_part = const.night_rulers[day_number].index(planet_index)
+        elif tob_hrs > sset:
+            srise = float(drik.sunrise(jd_utc + 1, place)[0])
+            planet_part = const.night_rulers[day_number].index(planet_index)
+            
+        day_dur = abs(sset - srise)
+        one_part = day_dur / 8.0
+        planet_start_time = srise + planet_part * one_part
+        if str(upagraha_part).lower() == 'middle':
+            planet_end_time = srise + (planet_part + 1) * one_part
+            planet_middle_time = 0.5 * (planet_start_time + planet_end_time)
+            jd_kaala = swe.julday(dob.year, dob.month, dob.day, planet_middle_time)
+        else:
+            jd_kaala = swe.julday(dob.year, dob.month, dob.day, planet_start_time)
+            
+        clong = drik.ascendant(jd_kaala, place)
+        upagraha_long = utils.norm360(clong[0] * 30 + clong[1] + dhasa_progression_correction)
+        return drik.dasavarga_from_long(upagraha_long, divisional_chart_factor)
+    except Exception as e:
+        clong = drik.ascendant(swe.julday(dob.year, dob.month, dob.day, tob[0] + tob[1]/60.0), place)
+        upagraha_long = utils.norm360(clong[0] * 30 + clong[1])
+        return drik.dasavarga_from_long(upagraha_long, divisional_chart_factor)
+drik.upagraha_longitude = _safe_upagraha_longitude
+
 # Monkeypatch swe functions to protect against missing ephemeris files (*.se1) and out-of-range epochs
 _orig_rise_trans = swe.rise_trans
 def _safe_rise_trans(*args, **kwargs):
-    args_list = list(args)
-    if len(args_list) > 0 and isinstance(args_list[0], (int, float)) and args_list[0] < 625000.50:
-        args_list[0] = 2451545.0
-        args = tuple(args_list)
-    elif 'tjdut' in kwargs and isinstance(kwargs['tjdut'], (int, float)) and kwargs['tjdut'] < 625000.50:
-        kwargs['tjdut'] = 2451545.0
     try:
         return _orig_rise_trans(*args, **kwargs)
     except Exception as e:
         err_msg = str(e)
-        if "not found in PATH" in err_msg or "outside" in err_msg:
+        if "not found in PATH" in err_msg or "outside" in err_msg or "seplm" in err_msg:
             kwargs_copy = dict(kwargs)
             if "flags" in kwargs_copy:
                 kwargs_copy["flags"] = (kwargs_copy["flags"] & ~swe.FLG_SWIEPH) | swe.FLG_MOSEPH
@@ -54,7 +123,7 @@ def _safe_calc_ut(*args, **kwargs):
         return _orig_calc_ut(*args, **kwargs)
     except swe.Error as e:
         err_msg = str(e)
-        if "not found in PATH" in err_msg or "outside" in err_msg:
+        if "not found in PATH" in err_msg or "outside" in err_msg or "seplm" in err_msg:
             kwargs_copy = dict(kwargs)
             if "flags" in kwargs_copy:
                 kwargs_copy["flags"] = (kwargs_copy["flags"] & ~swe.FLG_SWIEPH) | swe.FLG_MOSEPH
@@ -71,7 +140,7 @@ def _safe_houses_ex(*args, **kwargs):
         return _orig_houses_ex(*args, **kwargs)
     except swe.Error as e:
         err_msg = str(e)
-        if "not found in PATH" in err_msg or "outside" in err_msg:
+        if "not found in PATH" in err_msg or "outside" in err_msg or "seplm" in err_msg:
             kwargs_copy = dict(kwargs)
             if "flags" in kwargs_copy:
                 kwargs_copy["flags"] = (kwargs_copy["flags"] & ~swe.FLG_SWIEPH) | swe.FLG_MOSEPH
