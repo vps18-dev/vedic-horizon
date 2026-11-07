@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vedic Horizon (வேத ஜோதிடம்) - Vedic Astrology & Swiss Ephemeris Engine</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☸</text></svg>">
+</head>
+<body data-theme="pleasant-vedic">
+
+    <!-- Header & Brand -->
+    <header class="header-wrapper">
+        <div class="header-container">
+            <div class="brand-section">
+                <div class="brand-icon-box" id="brandIcon">
+                    <!-- Ganesha SVG injected via JS -->
+                </div>
+                <div>
+                    <h1 class="brand-title">
+                        VEDIC HORIZON
+                    </h1>
+                    <div class="brand-subtitle">
+                        <span>Precision Astronomical Calculations · Designed by Siddharthan VP</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-badges">
+                <div class="clock-badge" id="clockBadge">
+                    <span class="pulse-dot live-blink-dot"></span>
+                    <span id="headerClock"></span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-content">
+
+        <!-- Birth Details Form Card -->
+        <div class="form-card">
+            <form id="horoscopeForm" onsubmit="event.preventDefault(); calculateHoroscope();">
+                <div class="form-grid">
+                    <!-- Name -->
+                    <div class="form-group">
+                        <label class="form-label">Name / Title (பெயர்)</label>
+                        <input type="text" id="inputName" class="form-input" value="Native Profile" required>
+                    </div>
+
+                    <!-- Date of Birth -->
+                    <div class="form-group">
+                        <label class="form-label">Date of Birth (பிறந்த தேதி)</label>
+                        <input type="date" id="inputDate" class="form-input" value="1995-08-20" required>
+                    </div>
+
+                    <!-- Time of Birth -->
+                    <div class="form-group">
+                        <label class="form-label">Time of Birth (பிறந்த நேரம் - HH:MM:SS)</label>
+                        <input type="text" id="inputTime" class="form-input" value="06:30:00" placeholder="HH:MM:SS" required>
+                    </div>
+
+                    <!-- Place Name (with live autocomplete) -->
+                    <div class="form-group">
+                        <label class="form-label">Place of Birth (பிறந்த இடம் - City / State / Country)</label>
+                        <input type="text" id="inputPlace" class="form-input" value="New Delhi, India" placeholder="Type city, state, or country (e.g. Chennai, Madurai, Varanasi, California, London)..." autocomplete="off" required>
+                        <div id="autocompleteList" class="autocomplete-results"></div>
+
+                    </div>
+
+                    <!-- Latitude -->
+                    <div class="form-group">
+                        <label class="form-label">Latitude / அட்சரேகை (°N/S)</label>
+                        <input type="number" id="inputLat" class="form-input" step="any" value="28.6139" required>
+                    </div>
+
+                    <!-- Longitude -->
+                    <div class="form-group">
+                        <label class="form-label">Longitude / தீர்க்கரேகை (°E/W)</label>
+                        <input type="number" id="inputLon" class="form-input" step="any" value="77.2090" required>
+                    </div>
+
+                    <!-- Timezone Offset -->
+                    <div class="form-group">
+                        <label class="form-label">Timezone / நேர மண்டலம் (Hours from UTC)</label>
+                        <input type="number" id="inputTz" class="form-input" step="any" value="5.5" required>
+                    </div>
+
+                    <!-- Ayanamsa Selector -->
+                    <div class="form-group">
+                        <label class="form-label">Ayanamsa Mode / அயனாம்ச முறை</label>
+                        <select id="selectAyanamsa" class="form-select">
+                            <option value="LAHIRI" selected>Lahiri / லாகிரி (Chitrapaksha) - Standard</option>
+                            <option value="KP">Krishnamurti / கே.பி (KP System)</option>
+                            <option value="RAMAN">B.V. Raman / பி.வி. ராமன்</option>
+                            <option value="YUKTESHWAR">Sri Yukteshwar / யுக்தேஸ்வர்</option>
+                            <option value="JN_BHASIN">J.N. Bhasin / பாசின்</option>
+                            <option value="SURYASIDDHANTA">Surya Siddhanta / சூரிய சித்தாந்தம்</option>
+                            <option value="TROPICAL">Sayana / சாயனா (Tropical)</option>
+                        </select>
+                    </div>
+
+                    <!-- House System Selector -->
+                    <div class="form-group">
+                        <label class="form-label">House System / பாவ மத்திய முறை</label>
+                        <select id="selectHouseSystem" class="form-select">
+                            <option value="SRIPATHI" selected>Sripathi / ஸ்ரீபதி (Standard Vedic)</option>
+                            <option value="PLACIDUS">Placidus / பிளாசிடஸ் (KP)</option>
+                            <option value="EQUAL">Equal House / சம பாவம் (30° from Lagna)</option>
+                            <option value="WHOLE_SIGN">Whole Sign / ராசியே பாவம்</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Action Buttons Row: Generate Horoscope & Sky Right Now on same line -->
+                <div class="form-actions-row">
+                    <button type="submit" class="btn-submit" id="btnSubmit">
+                        <span>☸</span> Generate Horoscope / ஜாதகம் கணிக்கவும்
+                    </button>
+                    <button type="button" class="btn-now-action preset-btn active" id="btnPresetNowForm" onclick="loadPreset('now')">
+                        <span>⏱</span> Sky Right Now / கோச்சார நிலை (Transit)
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- View Mode Bar (All-in-One Single Page vs Tabbed) -->
+        <div class="view-mode-bar">
+            <span style="font-size: 0.82rem; font-weight: 600; color: var(--gold-light);">
+                👁️ Page Mode / காட்சி வடிவம்:
+            </span>
+            <button id="btnViewSingle" class="view-mode-btn active" onclick="setViewMode('single-page')">
+                <span>📑</span> All-in-One Page / முழுப் பக்க பார்வை
+            </button>
+            <button id="btnViewTabs" class="view-mode-btn" onclick="setViewMode('tabs')">
+                <span>🗂</span> Tabbed / தத்தல்கள்
+            </button>
+        </div>
+
+        <!-- Navigation Tabs / Sticky Section Jump Bar -->
+        <div class="tabs-wrapper" id="stickyJumpBar">
+            <button class="tab-btn active" onclick="switchTab('tabCharts')">
+                <span>☸</span> Horoscope Charts / ராசிக் கட்டங்கள்
+            </button>
+            <button class="tab-btn" onclick="switchTab('tabPlanets')">
+                <span>🪐</span> Planetary Positions / கிரக நிலைகள்
+            </button>
+            <button class="tab-btn" onclick="switchTab('tabPanchanga')">
+                <span>📅</span> Panchangam / பஞ்சாங்கம்
+            </button>
+            <button class="tab-btn" onclick="switchTab('tabProgression')">
+                <span>🔄</span> Dasa Progression & Transits / தசா சுழற்சி & கோச்சாரம்
+            </button>
+            <button class="tab-btn" onclick="switchTab('tabDasha')">
+                <span>⏳</span> Vimshottari Dasha / விம்சோத்தரி தசா
+            </button>
+            <button class="tab-btn" onclick="switchTab('tabAshtakavarga')">
+                <span>📊</span> Ashtakavarga / அஷ்டகவர்க்கம்
+            </button>
+            <button class="tab-btn" onclick="switchTab('tabShadbala')">
+                <span>💪</span> Shadbala Strengths / சட்பலம்
+            </button>
+            <button class="tab-btn" onclick="switchTab('tabYogas')">
+                <span>✨</span> Yogas & Doshas / யோகங்கள் & தோஷங்கள்
+            </button>
+            <button class="tab-btn" onclick="switchTab('tabMilan')">
+                <span>💍</span> Marriage Compatibility / திருமணப் பொருத்தம்
+            </button>
+        </div>
+
+        <!-- TAB 1: KUNDALI CHARTS -->
+        <div id="tabCharts" class="tab-pane active">
+            <div class="single-page-section-header">
+                <span class="sp-icon">☸</span>
+                <span class="sp-title">Horoscope Charts / ராசிக் கட்டங்கள்</span>
+            </div>
+                        <div class="chart-view-grid">
+                <!-- Left: D-1 Rasi Chart (or selected divisional chart) -->
+                <div class="chart-main-box">
+                    <div class="chart-controls-bar">
+                        <!-- Divisional Chart Select -->
+                        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 1; min-width: 0;">
+                            <label class="form-label" style="margin-bottom:0; white-space:nowrap; font-size: 0.8rem;">Chart / சக்கரம்:</label>
+                            <select id="selectDivChart" class="form-select" style="max-width: 190px; font-size: 0.8rem; padding: 4px 8px; height: 32px;" onchange="onDivChartChange(this.value)">
+                                <option value="D-1" selected>D-1 • Rasi / ராசி சக்கரம் (Lagna Chart)</option>
+                                <option value="D-9">D-9 • Navamsa / நவாம்சம் (Dharma & Marriage)</option>
+                                <option value="D-10">D-10 • Dasamsa / தசாம்சம் (Career & Profession)</option>
+                                <option value="D-2">D-2 • Hora / ஹோரை (Wealth & Speech)</option>
+                                <option value="D-3">D-3 • Drekkana / திரேக்காணம் (Courage & Siblings)</option>
+                                <option value="D-4">D-4 • Chaturthamsa / சதுர்த்தாம்சம் (Real Estate & Fortune)</option>
+                                <option value="D-7">D-7 • Saptamsa / சப்தாம்சம் (Children & Lineage)</option>
+                                <option value="D-12">D-12 • Dwadasamsa / துவாதசாம்சம் (Parents & Ancestry)</option>
+                                <option value="D-16">D-16 • Shodasamsa / சோடசாம்சம் (Vehicles & Luxuries)</option>
+                                <option value="D-20">D-20 • Vimsamsa / விம்சாம்சம் (Spiritual Upasana)</option>
+                                <option value="D-24">D-24 • Chaturvimsamsa / சதுர்விம்சாம்சம் (Higher Learning)</option>
+                                <option value="D-27">D-27 • Saptavimsamsa / சப்தவிம்சாம்சம் (Inner Strengths)</option>
+                                <option value="D-30">D-30 • Trimsamsa / திரிம்சாம்சம் (Evils & Adversities)</option>
+                                <option value="D-60">D-60 • Shastiamsa / சஷ்டியாம்சம் (Root Karma)</option>
+                            </select>
+                        </div>
+
+                        <!-- Live Mahadasha / Antardasha Display -->
+                        <div class="chart-header-actions" style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                            <div id="chartHeaderDasha" class="chart-header-dasha-pill" title="Current Vimshottari Mahadasha & Antardasha / தற்போதைய மகாதிசை மற்றும் அந்தர்திசை">
+                                <div class="dasha-line">
+                                    <span class="dasha-label">Mahadasha / மகாதிசை:</span> 
+                                    <strong id="chartHeaderMaha" class="dasha-val">--</strong>
+                                </div>
+                                <div class="dasha-line">
+                                    <span class="dasha-label">Antardasha / அந்தர்திசை:</span> 
+                                    <strong id="chartHeaderAntar" class="dasha-val">--</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SVG D-1 Chart Container -->
+                    <div id="chartContainer" class="chart-svg-container">
+                        <!-- SVG injected by VedicChartRenderer -->
+                    </div>
+
+                    <div style="font-size: 0.82rem; color: var(--gold-light); margin-top: 14px; text-align: center; font-weight: 600;">
+                        ☸ D-1 Rasi Chart / ராசி சக்கரம் (Physical Manifestation & Lagna)
+                    </div>
+                </div>
+
+                <!-- Right: D-9 Navamsa Chart (Soul Dharma & Marriage) -->
+                <div class="chart-main-box">
+                    <div class="chart-controls-bar">
+                        <!-- Right Divisional Chart Select (defaults to D-9) -->
+                        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 1; min-width: 0;">
+                            <label class="form-label" style="margin-bottom:0; white-space:nowrap; font-size: 0.8rem;">Compare / ஒப்பீடு:</label>
+                            <select id="selectD9DivChart" class="form-select" style="max-width: 190px; font-size: 0.8rem; padding: 4px 8px; height: 32px;" onchange="onD9DivChartChange(this.value)">
+                                <option value="D-9" selected>D-9 • Navamsa / நவாம்சம் (Dharma & Marriage)</option>
+                                <option value="D-10">D-10 • Dasamsa / தசாம்சம் (Career & Profession)</option>
+                                <option value="D-1">D-1 • Rasi / ராசி சக்கரம் (Lagna Chart)</option>
+                                <option value="D-2">D-2 • Hora / ஹோரை (Wealth & Speech)</option>
+                                <option value="D-3">D-3 • Drekkana / திரேக்காணம் (Courage & Siblings)</option>
+                                <option value="D-4">D-4 • Chaturthamsa / சதுர்த்தாம்சம் (Real Estate & Fortune)</option>
+                                <option value="D-7">D-7 • Saptamsa / சப்தாம்சம் (Children & Lineage)</option>
+                                <option value="D-12">D-12 • Dwadasamsa / துவாதசாம்சம் (Parents & Ancestry)</option>
+                                <option value="D-16">D-16 • Shodasamsa / சோடசாம்சம் (Vehicles & Luxuries)</option>
+                                <option value="D-20">D-20 • Vimsamsa / விம்சாம்சம் (Spiritual Upasana)</option>
+                                <option value="D-24">D-24 • Chaturvimsamsa / சதுர்விம்சாம்சம் (Higher Learning)</option>
+                                <option value="D-27">D-27 • Saptavimsamsa / சப்தவிம்சாம்சம் (Inner Strengths)</option>
+                                <option value="D-30">D-30 • Trimsamsa / திரிம்சாம்சம் (Evils & Adversities)</option>
+                                <option value="D-60">D-60 • Shastiamsa / சஷ்டியாம்சம் (Root Karma)</option>
+                            </select>
+                        </div>
+
+
+                    </div>
+
+                    <!-- SVG D-9 Chart Container -->
+                    <div id="chartD9Container" class="chart-svg-container">
+                        <!-- SVG injected by VedicChartRenderer -->
+                    </div>
+
+                    <div style="font-size: 0.82rem; color: var(--gold-light); margin-top: 14px; text-align: center; font-weight: 600;">
+                        ✨ D-9 Navamsa Chart / நவாம்ச சக்கரம் (Soul Dharma, Marriage & Inner Dignity)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: PLANETARY DETAILS -->
+        <div id="tabPlanets" class="tab-pane">
+            <div class="single-page-section-header">
+                <span class="sp-icon">🪐</span>
+                <span class="sp-title">Planetary Positions & Longitudes / கிரக நிலைகள்</span>
+            </div>
+            <!-- Graha Positions Table -->
+            <div class="table-card">
+                <table class="vedic-table" id="planetsTable">
+                    <thead>
+                        <tr>
+                            <th>Graha / கிரகம் (Planet)</th>
+                            <th>Rasi / ராசி (Sign)</th>
+                            <th>Longitude / ஸ்புடம்</th>
+                            <th>Speed & Motion / இயக்கம்</th>
+                            <th>Nakshatra & Pada / நட்சத்திரம் & பாதம்</th>
+                            <th>Dignity / நிலை (Avastha)</th>
+                            <th>Chara Karaka / காரகர்</th>
+                        </tr>
+                    </thead>
+                    <tbody id="planetsTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Special Lagnas & Upagrahas Section -->
+            <div class="form-card" style="margin-top: 24px;">
+                <h3 style="font-family: var(--font-serif); color: var(--gold-bright); margin-bottom: 16px;">
+                    ✨ Special Lagnas, Arudhas & Upagrahas / சிறப்பு லக்னங்கள் & உபகிரகங்கள்
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;" id="specialPointsGrid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: PANCHANGA & MUHURTA -->
+        <div id="tabPanchanga" class="tab-pane">
+            <div class="single-page-section-header">
+                <span class="sp-icon">📅</span>
+                <span class="sp-title">Vedic Panchangam & Calendar Eras / பஞ்சாங்கம்</span>
+            </div>
+            <!-- 5 Limbs of Panchanga Cards -->
+            <div class="panchanga-grid" id="panchangaAngasGrid">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Auspicious & Inauspicious Muhurtas -->
+            <h3 style="font-family: var(--font-serif); color: var(--gold-bright); margin: 28px 0 16px 0;">
+                ⏳ Daily Auspicious & Sensitive Muhurta Windows / தினசரி சுப & அசுப நேரங்கள்
+            </h3>
+            <div class="muhurta-banner-grid" id="muhurtaWindowsGrid">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Samvatsara & Vedic Calendar Eras -->
+            <div class="form-card" style="margin-top: 28px;">
+                <h3 style="font-family: var(--font-serif); color: var(--gold-light); margin-bottom: 14px;">
+                    📜 Vedic Samvatsara & Traditional Eras / தமிழ் ஆண்டு & பாரம்பரிய காலக் கணக்கு
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;" id="calendarErasGrid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 8B: DASA PROGRESSION & TRANSITS (P.V.R. NARASIMHA RAO METHOD) -->
+        <div id="tabProgression" class="tab-pane">
+            <div class="single-page-section-header">
+                <span class="sp-icon">🔄</span>
+                <span class="sp-title">Dasa Progression & Transits (P.V.R. Rao Method) / தசா சுழற்சி & கோச்சாரம்</span>
+            </div>
+            <!-- Hero Research Card -->
+            <div class="form-card" style="margin-bottom: 24px; border-left: 4px solid var(--gold-bright);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
+                    <div>
+                        <h2 style="font-family: var(--font-serif); color: var(--gold-bright); font-size: 1.35rem; display: flex; align-items: center; gap: 10px;">
+                            <span>🔄</span> Transits and Nakshatra Dasa Progression / தசா சுழற்சி & கோச்சார இணைவு
+                        </h2>
+                        <div style="color: var(--gold-light); font-size: 0.88rem; margin-top: 4px; font-weight: 500;">
+                            Seminal Research by Sri P.V.R. Narasimha Rao (October 12, 2014) • Author of Jagannatha Hora (www.VedicAstrologer.org)
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <span class="badge" style="background: rgba(212, 175, 55, 0.2); border: 1px solid var(--gold-primary); color: var(--gold-bright);">
+                            NASA JPL DE431 Precision
+                        </span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 14px; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.75; border-top: 1px solid rgba(212, 175, 55, 0.2); padding-top: 12px;">
+                    <p>
+                        <strong>Theoretical Framework (அடிப்படைக் கோட்பாடு):</strong> Instead of evaluating transit planets against natal positions alone, the <strong>entire natal chart is rotated</strong> by the non-linear angle by which the Moon has progressed through the Nakshatra Dasa at the target event date. When transiting planets (Jupiter, Saturn, Rahu, Ketu, Mars) form close conjunctions (0°) or special Vedic aspects (Jupiter 5/9, Saturn 3/10, Mars 4/8, 7th mutual) to progressed planets in the relevant Divisional Chart (D-1, D-9, D-10, D-4, D-7, D-24), life events are triggered!
+                    </p>
+                    <p style="margin-top: 8px; color: var(--gold-light);">
+                        <strong>தமிழ் விளக்கம்:</strong> கோச்சார பலன்களை ஜாதக நிலையோடு மட்டும் பார்க்காமல், விம்சோத்தரி அல்லது யோகினி தசா கடந்த கால அளவிற்கு ஏற்ப ஒட்டுமொத்த ஜாதகத்தையும் சுழற்றி (Dasa Progression) கணிக்கும் முறை. அவ்வாறு நகர்த்தப்பட்ட வர்க்க சக்கரங்களில் (D-1 முதல் D-60) கோச்சார கிரகங்கள் 0° சேர்க்கை அல்லது சிறப்புப் பார்வைகள் (குரு 5/9, சனி 3/10, செவ்வாய் 4/8, சமசப்தமம்) செய்யும்போது குறிப்பிட்ட நிகழ்வுகள் துல்லியமாக நிறைவேறுகின்றன.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Progression Calculation Parameters Form -->
+            <div class="form-card" style="margin-bottom: 24px;">
+                <h3 style="font-family: var(--font-serif); color: var(--gold-bright); font-size: 1.05rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                    <span>⚙️</span> Target Event & Progression Parameters / சுழற்சி & நிகழ்வுக் கணிப்பு அமைப்புகள்
+                </h3>
+                <div class="form-grid">
+                    <!-- Target Event Date -->
+                    <div class="form-group">
+                        <label class="form-label">Target / Event Date (நிகழ்வுத் தேதி)</label>
+                        <input type="date" id="progTargetDate" class="form-input" value="1987-05-28" required>
+                    </div>
+
+                    <!-- Target Event Time -->
+                    <div class="form-group">
+                        <label class="form-label">Target / Event Time (நிகழ்வு நேரம் - HH:MM:SS)</label>
+                        <input type="text" id="progTargetTime" class="form-input" value="19:00:00" placeholder="HH:MM:SS" required>
+                    </div>
+
+                    <!-- Progression Method -->
+                    <div class="form-group">
+                        <label class="form-label">Progression Method / தசா சுழற்சி முறை</label>
+                        <select id="progMethod" class="form-select">
+                            <option value="rasi_vimsottari" selected>Method 1: Rasi Vimshottari Progression (Standard PVR Rao) / ராசி விம்சோத்தரி சுழற்சி</option>
+                            <option value="divisional_vimsottari">Method 2: Divisional Vimshottari Progression (Divisional Moon Seed) / வர்க்க விம்சோத்தரி சுழற்சி</option>
+                            <option value="yogini">Method 3: Yogini Dasa Progression (36-Year Cycle) / யோகினி தசா சுழற்சி</option>
+                        </select>
+                    </div>
+
+                    <!-- Divisional Chart Code -->
+                    <div class="form-group">
+                        <label class="form-label">Divisional Chart / வர்க்க சக்கரம்</label>
+                        <select id="progDivChart" class="form-select">
+                            <option value="D-1">D-1 • Rasi / ராசி (Physical Life & Overall Persona)</option>
+                            <option value="D-9">D-9 • Navamsa / நவாம்சம் (Marriage, Dharma & Life Partner)</option>
+                            <option value="D-10">D-10 • Dasamsa / தசாம்சம் (Career, Profession & Status)</option>
+                            <option value="D-4">D-4 • Chaturthamsa / சதுர்த்தாம்சம் (Residence & Foreign Travel)</option>
+                            <option value="D-7">D-7 • Saptamsa / சப்தாம்சம் (Children & Progeny)</option>
+                            <option value="D-24" selected>D-24 • Chaturvimsamsa / சதுர்விம்சாம்சம் (Higher Learning & Rank)</option>
+                            <option value="D-16">D-16 • Shodasamsa / சோடசாம்சம் (Vehicles, Accidents & Luxuries)</option>
+                            <option value="D-2">D-2 • Hora / ஹோரை (Finances & Wealth)</option>
+                            <option value="D-3">D-3 • Drekkana / திரேக்காணம் (Siblings & Initiative)</option>
+                            <option value="D-12">D-12 • Dwadasamsa / துவாதசாம்சம் (Parents & Lineage)</option>
+                            <option value="D-20">D-20 • Vimsamsa / விம்சாம்சம் (Spiritual Upasana)</option>
+                            <option value="D-30">D-30 • Trimsamsa / திரிம்சாம்சம் (Misfortunes & Obstacles)</option>
+                            <option value="D-60">D-60 • Shastiamsa / சஷ்டியாம்சம் (Past Life Karma)</option>
+                        </select>
+                    </div>
+
+                    <!-- Ayanamsa Selector for Progression -->
+                    <div class="form-group">
+                        <label class="form-label">Ayanamsa / அயனாம்சம்</label>
+                        <select id="progAyanamsa" class="form-select">
+                            <option value="PUSHYA_PAKSHA" selected>Pushya-paksha / புஷ்ய பக்ஷம் (PVR Rao Recommended)</option>
+                            <option value="LAHIRI">Chitrapaksha / Lahiri / லாகிரி (Standard Vedic)</option>
+                            <option value="KP">Krishnamurti / கே.பி (KP System)</option>
+                            <option value="RAMAN">B.V. Raman / ராமன்</option>
+                            <option value="YUKTESHWAR">Sri Yukteshwar / யுக்தேஸ்வர்</option>
+                        </select>
+                    </div>
+
+                    <!-- Calculate Button -->
+                    <div class="form-group" style="display: flex; align-items: flex-end;">
+                        <button type="button" class="btn btn-primary" id="btnRunProgression" style="width: 100%; height: 46px;" onclick="calculateProgression()">
+                            <span>🔄</span> Compute Dasa Progression & Transits / தசா சுழற்சியைக் கணக்கிடுக
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progression Summary Metrics Banner -->
+            <div id="progSummaryBanner" style="display: none; margin-bottom: 24px;">
+                <div class="prog-metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">⏳</div>
+                        <div class="metric-label">Running Dasa at Event / நிகழ்வு தசா</div>
+                        <div class="metric-value" id="metricRunningDasha">--</div>
+                        <div class="metric-sub" id="metricDashaSub">Mahadasa - Antardasa - Pratyantardasa</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">📐</div>
+                        <div class="metric-label">Progression Angle / சுழற்சி கோணம் (Δλ)</div>
+                        <div class="metric-value" id="metricProgAngle">--</div>
+                        <div class="metric-sub" id="metricProgAngleSub">Zodiac Chart Rotation</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">🌙</div>
+                        <div class="metric-label">Moon Progression / சந்திரன் நகர்வு</div>
+                        <div class="metric-value" id="metricMoonProg">--</div>
+                        <div class="metric-sub" id="metricMoonProgSub">Natal → Progressed Moon</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">🎯</div>
+                        <div class="metric-label">Divisional Focus / வர்க்க முக்கியத்துவம்</div>
+                        <div class="metric-value" id="metricDivName">--</div>
+                        <div class="metric-sub" id="metricDivSignif">Divisional Signification</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dual Interactive Charts Side-by-Side (Progressed & Transit) -->
+            <div id="progChartsSection" style="display: none; margin-bottom: 24px;">
+                <!-- Chart Style Switcher Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                    <div style="font-family: var(--font-serif); font-size: 1.1rem; color: var(--gold-bright); display: flex; align-items: center; gap: 8px;">
+                        <span>☸</span> Synchronized Progressed & Transit Charts / சுழற்சி மற்றும் கோச்சாரக் கட்டங்கள்
+                    </div>
+                    <div class="style-toggle-group">
+                        <button class="style-btn active" id="btnProgSouth" onclick="setProgChartStyle('south')">
+                            Grid (தென் இந்திய முறை)
+                        </button>
+                        <button class="style-btn" id="btnProgNorth" onclick="setProgChartStyle('north')">
+                            Diamond (வட இந்திய முறை)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="prog-charts-grid">
+                    <!-- Left: Progressed Chart in Selected D-Chart -->
+                    <div class="chart-main-box">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(212, 175, 55, 0.2);">
+                            <div>
+                                <span style="font-weight: 700; color: var(--gold-bright); font-size: 0.95rem;" id="progChartHeaderTitle">
+                                    Progressed Chart (சுழற்சி சக்கரம்)
+                                </span>
+                                <div style="font-size: 0.78rem; color: var(--text-muted);" id="progChartHeaderSub">
+                                    Natal planets advanced by Dasa progression angle
+                                </div>
+                            </div>
+                            <span class="badge" style="background: rgba(212, 175, 55, 0.25); color: var(--gold-bright);" id="progChartBadge">
+                                Progressed D-Chart
+                            </span>
+                        </div>
+                        <div id="chartProgContainer" class="chart-svg-box">
+                            <!-- SVG rendered here -->
+                        </div>
+                    </div>
+
+                    <!-- Right: Event Transit Chart -->
+                    <div class="chart-main-box">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(212, 175, 55, 0.2);">
+                            <div>
+                                <span style="font-weight: 700; color: #6ee7b7; font-size: 0.95rem;">
+                                    Event Transits / கோச்சார சக்கரம்
+                                </span>
+                                <div style="font-size: 0.78rem; color: var(--text-muted);" id="transitChartHeaderSub">
+                                    Actual celestial planetary positions at event date & time
+                                </div>
+                            </div>
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.25); color: #6ee7b7;">
+                                Real Transits (Gochara)
+                            </span>
+                        </div>
+                        <div id="chartTransitContainer" class="chart-svg-box">
+                            <!-- SVG rendered here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transit-to-Progression Activations Section -->
+            <div id="progActivationsSection" style="display: none; margin-bottom: 24px;">
+                <div class="form-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h3 style="font-family: var(--font-serif); color: var(--gold-bright); font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                                <span>⚡</span> Transit-to-Progression Activations / கோச்சாரம் சுழற்சியைத் தூண்டும் நிலைகள்
+                            </h3>
+                            <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 3px;">
+                                Close conjunctions (0°) and Vedic special aspects (Jupiter 5/9, Saturn 3/10, Mars 4/8, 7th mutual) activating life events
+                            </div>
+                        </div>
+                        <div id="activationsCountBadge" class="badge" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5;">
+                            0 Activations Found
+                        </div>
+                    </div>
+
+                    <div class="activations-cards-grid" id="activationsList">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Planetary Longitude Comparison Table -->
+            <div id="progTableSection" style="display: none; margin-bottom: 24px;">
+                <div class="table-card">
+                    <div style="padding: 14px 18px; background: var(--table-th-bg, #f7f1e4); border-bottom: 1px solid var(--border-gold); font-weight: 700; color: var(--gold-light); display: flex; justify-content: space-between; align-items: center;">
+                        <span>📋 Natal vs Progressed vs Transit Longitudes / கிரக நிலைகள் ஒப்பீடு அட்டவணை</span>
+                        <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 400;">Sub-arcsecond NASA JPL DE431 Precision</span>
+                    </div>
+                    <table class="vedic-table" id="progComparisonTable">
+                        <thead>
+                            <tr>
+                                <th>Body / கிரகம்</th>
+                                <th>Natal (D-Chart) / பிறப்பு நிலை</th>
+                                <th>Progressed (D-Chart) / சுழற்சி நிலை</th>
+                                <th>Event Transit / கோச்சாரம்</th>
+                                <th>Progression Angle / சுழற்சி மாற்றம்</th>
+                                <th>D-Chart Sign / ராசி</th>
+                            </tr>
+                        </thead>
+                        <tbody id="progComparisonTableBody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: VIMSHOTTARI DASHA -->
+        <div id="tabDasha" class="tab-pane">
+            <div class="single-page-section-header">
+                <span class="sp-icon">⏳</span>
+                <span class="sp-title">Vimshottari Dasha Periods / விம்சோத்தரி தசா</span>
+            </div>
+            <!-- Active Dasha Hero -->
+            <div class="active-dasha-hero" id="dashaHero">
+                <div>
+                    <div style="font-size: 0.85rem; color: var(--gold-light); font-weight: 500;">
+                        ACTIVE RUNNING PERIOD / தற்போதைய தசா புக்தி காலம்
+                    </div>
+                    <div class="dasha-hero-title" id="activeDashaText">
+                        Loading Dasha...
+                    </div>
+                    <div style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 4px;" id="dashaBalanceText">
+                        Balance at birth: ...
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);">Target Calculation Date / கணக்கீட்டு தேதி</div>
+                    <input type="date" id="dashaDateInput" class="form-input" style="padding: 6px 12px; margin-top: 4px;" onchange="recalculateDasha(this.value)">
+                </div>
+            </div>
+
+            <!-- Dasha Accordion Hierarchy -->
+            <div class="dasha-accordion" id="dashaAccordion">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- TAB 5: ASHTAKAVARGA & GOCHARA -->
+        <div id="tabAshtakavarga" class="tab-pane">
+            <div class="single-page-section-header">
+                <span class="sp-icon">📊</span>
+                <span class="sp-title">Ashtakavarga & Gochara Transits / அஷ்டகவர்க்கம் & கோச்சாரம்</span>
+            </div>
+                        <!-- Single Visual Ashtakavarga Chart (South Indian 4x4 Kundali) -->
+            <div class="chart-main-box" style="margin-bottom: 24px;">
+                <div class="chart-controls-bar">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-family: var(--font-serif); font-size: 1.15rem; font-weight: 700; color: var(--gold-bright);">
+                            ☸ Sarvashtakavarga Chart / சர்வ அஷ்டகவர்க்க சக்கரம் (337 Rekhas)
+                        </span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #6ee7b7; font-weight: 700;">
+                            ≥28: Benefic / சுபம்
+                        </span>
+                        <span class="badge" style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; font-weight: 700;">
+                            &lt;28: Malefic / அசுபம்
+                        </span>
+                    </div>
+                </div>
+
+                <div id="ashtakavargaChartContainer" class="chart-svg-container" style="max-width: 680px;">
+                    <!-- SVG injected by JS -->
+                </div>
+
+                <div style="font-size: 0.82rem; color: var(--gold-light); margin-top: 14px; text-align: center; font-weight: 600;">
+                    💡 Each house displays Rasi Name, House #, Total SAV Strength Badge, and the 7 Planetary Rekhas (☉ ☾ ♂ ☿ ♃ ♀ ♄)
+                </div>
+            </div>
+
+            <!-- Bhinnashtakavarga (BAV) Non-Scrolling Matrix Table -->
+            <div class="table-card" style="margin-top: 24px;">
+                <div style="padding: 14px 18px; background: var(--table-th-bg, #f7f1e4); border-bottom: 1px solid var(--border-gold); font-weight: 700; color: var(--gold-light); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <span>📊 Bhinnashtakavarga (BAV) / பின்ன அஷ்டகவர்க்கம் (Planetary Rekhas per Sign & SAV Total)</span>
+                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Fit to Screen • கிடைமட்ட சுருக்கம் இல்லை (No Scroll)</span>
+                </div>
+                <div class="bav-container">
+                    <table class="vedic-table" id="bavTable">
+                        <thead>
+                            <tr>
+                                <th>Graha / கிரகம்</th>
+                                <th><div>♈</div><div>மேஷம்</div></th>
+                                <th><div>♉</div><div>ரிஷபம்</div></th>
+                                <th><div>♊</div><div>மிதுனம்</div></th>
+                                <th><div>♋</div><div>கடகம்</div></th>
+                                <th><div>♌</div><div>சிம்மம்</div></th>
+                                <th><div>♍</div><div>கன்னி</div></th>
+                                <th><div>♎</div><div>துலாம்</div></th>
+                                <th><div>♏</div><div>விருச்சி</div></th>
+                                <th><div>♐</div><div>தனுசு</div></th>
+                                <th><div>♑</div><div>மகரம்</div></th>
+                                <th><div>♒</div><div>கும்பம்</div></th>
+                                <th><div>♓</div><div>மீனம்</div></th>
+                                <th><div>Total</div><div>மொத்தம்</div></th>
+                            </tr>
+                        </thead>
+                        <tbody id="bavTableBody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Live Transits (Gochara) & Sade Sati Section -->
+            <div class="form-card" style="margin-top: 28px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                    <h3 style="font-family: var(--font-serif); color: var(--gold-bright);">
+                        🪐 Real-Time Planetary Transits & Sade Sati / நடப்பு கோச்சார நிலை & ஏழரை சனி விவரம்
+                    </h3>
+                    <div id="sadeSatiBadge" class="badge" style="padding: 6px 14px; font-size: 0.85rem;">
+                        Checking Sade Sati...
+                    </div>
+                </div>
+                <div class="transits-container">
+                    <table class="vedic-table" id="transitsTable">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <div>Planet</div>
+                                    <div class="th-ta">கிரகம்</div>
+                                </th>
+                                <th>
+                                    <div>Current Sign</div>
+                                    <div class="th-ta">நடப்பு ராசி</div>
+                                </th>
+                                <th>
+                                    <div>Longitude &amp; Nakshatra</div>
+                                    <div class="th-ta">பாகை &amp; நட்சத்திரம்</div>
+                                </th>
+                                <th>
+                                    <div>From Moon</div>
+                                    <div class="th-ta">சந்திரன் வழி பாவம்</div>
+                                </th>
+                                <th>
+                                    <div>From Lagna</div>
+                                    <div class="th-ta">லக்னம் வழி பாவம்</div>
+                                </th>
+                                <th>
+                                    <div>Transit Status</div>
+                                    <div class="th-ta">கோச்சார பலன்</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="transitsTableBody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 6: SHADBALA STRENGTHS -->
+        <div id="tabShadbala" class="tab-pane">
+            <div class="single-page-section-header">
+                <span class="sp-icon">💪</span>
+                <span class="sp-title">Shadbala Strengths & Potency / சட்பலம்</span>
+            </div>
+            <h3 style="font-family: var(--font-serif); color: var(--gold-bright); margin-bottom: 16px;">
+                💪 Sixfold Planetary Strength / சட்பல கிரக வலிமை வரிசை
+            </h3>
+            <div class="table-card">
+                <table class="vedic-table" id="shadbalaTable">
+                    <thead>
+                        <tr>
+                            <th>Rank / தரம்</th>
+                            <th>Graha / கிரகம்</th>
+                            <th>Sthana Bala (ஸ்தான பலம்)</th>
+                            <th>Dig Bala (திக் பலம்)</th>
+                            <th>Kaala Bala (கால பலம்)</th>
+                            <th>Cheshta Bala (சேஷ்ட பலம்)</th>
+                            <th>Naisargika Bala (நைசர்க்கிக பலம்)</th>
+                            <th>Drik Bala (திருக் பலம்)</th>
+                            <th>Total Rupas / மொத்த ரூபங்கள்</th>
+                            <th>Required / தேவைப்படும் பலம்</th>
+                            <th>Strength Ratio / விகிதம்</th>
+                            <th>Status / நிலை</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shadbalaTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 7: YOGAS & DOSHAS -->
+        <div id="tabYogas" class="tab-pane">
+            <div class="single-page-section-header">
+                <span class="sp-icon">✨</span>
+                <span class="sp-title">Vedic Yogas & Planetary Combinations / யோகங்கள் & தோஷங்கள்</span>
+            </div>
+            <h3 style="font-family: var(--font-serif); color: var(--gold-bright); margin-bottom: 16px;">
+                ✨ Auspicious Yogas & Raja Yogas Detected / கண்டறியப்பட்ட சுப யோகங்கள் & ராஜ யோகங்கள்
+            </h3>
+            <div class="yogas-grid" id="yogasGrid">
+                <!-- Populated by JS -->
+            </div>
+
+            <h3 style="font-family: var(--font-serif); color: #f87171; margin: 32px 0 16px 0;">
+                ⚠️ Astrological Afflictions & Dosha Analysis / தோஷ பரிசோதனை (செவ்வாய், காலசர்ப்பம்)
+            </h3>
+            <div class="yogas-grid" id="doshasGrid">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- TAB 8: KUNDALI MILAN -->
+        <div id="tabMilan" class="tab-pane">
+            <div class="single-page-section-header">
+                <span class="sp-icon">💍</span>
+                <span class="sp-title">Marriage Compatibility (Porutham) / திருமணப் பொருத்தம்</span>
+            </div>
+            <div class="milan-inputs-grid">
+                <!-- Groom / Boy Details -->
+                <div class="milan-box">
+                    <h3 style="font-family: var(--font-serif); color: #38bdf8; margin-bottom: 14px;">
+                        🤵 Groom / Boy Details / மணமகன் விவரம்
+                    </h3>
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label">Nakshatra / நட்சத்திரம்</label>
+                        <select id="milanBoyNak" class="form-select"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Pada / பாதம் (Quarter 1-4)</label>
+                        <select id="milanBoyPada" class="form-select">
+                            <option value="1">Pada 1 / 1-ஆம் பாதம்</option>
+                            <option value="2" selected>Pada 2 / 2-ஆம் பாதம்</option>
+                            <option value="3">Pada 3 / 3-ஆம் பாதம்</option>
+                            <option value="4">Pada 4 / 4-ஆம் பாதம்</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Bride / Girl Details -->
+                <div class="milan-box">
+                    <h3 style="font-family: var(--font-serif); color: #f472b6; margin-bottom: 14px;">
+                        👰 Bride / Girl Details / மணமகள் விவரம்
+                    </h3>
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label">Nakshatra / நட்சத்திரம்</label>
+                        <select id="milanGirlNak" class="form-select"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Pada / பாதம் (Quarter 1-4)</label>
+                        <select id="milanGirlPada" class="form-select">
+                            <option value="1" selected>Pada 1 / 1-ஆம் பாதம்</option>
+                            <option value="2">Pada 2 / 2-ஆம் பாதம்</option>
+                            <option value="3">Pada 3 / 3-ஆம் பாதம்</option>
+                            <option value="4">Pada 4 / 4-ஆம் பாதம்</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-submit" onclick="calculateMatching()" style="margin-bottom: 24px;">
+                <span>💍</span> Calculate Ashtakoota & Dasa Porutham Match / திருமணப் பொருத்தம் கணிக்கவும்
+            </button>
+
+            <!-- Score Hero Banner -->
+            <div class="milan-score-hero" id="milanScoreHero" style="display: none;">
+                <div style="font-size: 0.95rem; color: var(--gold-light); font-weight: 600;">
+                    TOTAL ASHTAKOOTA COMPATIBILITY SCORE / மொத்த பொருத்தப் புள்ளிகள்
+                </div>
+                <div class="milan-total" id="milanTotalScore">
+                    -- / 36
+                </div>
+                <div style="font-size: 1.2rem; font-weight: 700; color: #f8fafc;" id="milanVerdict">
+                    --
+                </div>
+            </div>
+
+            <!-- Kootas Breakdown Table -->
+            <div id="milanTablesWrapper" style="display: none;">
+                <div class="table-card" style="margin-bottom: 24px;">
+                    <div style="padding: 14px 18px; background: var(--table-th-bg, #f7f1e4); border-bottom: 1px solid var(--border-gold); font-weight: 700; color: var(--gold-light);">
+                        North Indian Ashtakoota 36 Gunas Breakdown / 36 குணங்கள் விபரம்
+                    </div>
+                    <table class="vedic-table" id="milanNorthTable">
+                        <thead>
+                            <tr>
+                                <th>Koota Factor / பொருத்த காரகம்</th>
+                                <th>Obtained Score / பெற்ற புள்ளி</th>
+                                <th>Maximum Score / அதிகபட்சம்</th>
+                                <th>Evaluation Scope / பரிசீலனை நோக்கம்</th>
+                            </tr>
+                        </thead>
+                        <tbody id="milanNorthTableBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="table-card">
+                    <div style="padding: 14px 18px; background: var(--table-th-bg, #f7f1e4); border-bottom: 1px solid var(--border-gold); font-weight: 700; color: var(--gold-light);">
+                        South Indian Dasa Porutham 10-Koota Checklist / தென்னிந்திய 10 பொருத்தங்கள் அட்டவணை
+                    </div>
+                    <table class="vedic-table" id="milanSouthTable">
+                        <thead>
+                            <tr>
+                                <th>Porutham Factor / பொருத்த விபரம்</th>
+                                <th>Compatibility Result / பொருத்த முடிவு</th>
+                            </tr>
+                        </thead>
+                        <tbody id="milanSouthTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        
+    </main>
+
+    <!-- Footer: Acknowledgements & Software License -->
+    <footer class="app-footer">
+        <div class="footer-container">
+            <h2 class="footer-heading" style="justify-content: center; text-align: center; font-size: 0.95rem;">
+                <span>☸</span> Acknowledgements and Software License / நன்றியுரை மற்றும் உரிமக் கொள்கை
+            </h2>
+            <div class="footer-grid">
+                <!-- Acknowledgements -->
+                <div class="footer-card">
+                    <h3 class="footer-card-title">
+                        <span>🙏</span> Acknowledgements / நன்றியுரை
+                    </h3>
+                    <p class="footer-text">
+                        Inspired by <strong>JAGANNATHA HORA</strong>, the renowned Vedic Astrology software developed by <strong>Sri P.V.R. Narasimha Rao</strong>. We gratefully acknowledge his original work and extend our sincere thanks and appreciation to him. All credits and due recognition go to the original developer.
+                    </p>
+                    <p class="footer-text" style="margin-top: 10px; font-size: 0.88rem; color: var(--gold-light);">
+                        ஸ்ரீ P.V.R. நரசிம்ம ராவ் அவர்களின் ஜகன்னாத ஹோரா மென்பொருளின் மூலக் கணிதக் கொள்கைகளுக்கு எங்களது நெஞ்சார்ந்த நன்றிகளையும் வணக்கங்களையும் தெரிவித்துக் கொள்கிறோம்.
+                    </p>
+                    <p class="footer-text" style="margin-top: 14px;">
+                        Official website: <a href="https://www.VedicAstrologer.org" target="_blank" rel="noopener noreferrer" class="footer-link">www.VedicAstrologer.org</a> ↗
+                    </p>
+                </div>
+
+                <!-- Software License -->
+                <div class="footer-card">
+                    <h3 class="footer-card-title">
+                        <span>📜</span> Free Software and Redistribution Policy / இலவச மென்பொருள் உரிமம்
+                    </h3>
+                    <p class="footer-text">
+                        <strong>Free Software and Redistribution Policy:</strong> This software is provided free of charge. Users are permitted to copy and redistribute it, provided that all original copyright notices are retained and the software is not distributed for commercial purposes or used to generate any profit.
+                    </p>
+                    <p class="footer-text" style="margin-top: 10px; font-size: 0.88rem; color: var(--gold-light);">
+                        இம்மென்பொருள் இலவசக் கல்விக் கணிப்பிற்காக மட்டுமே வழங்கப்படுகிறது. வணிக ரீதியற்ற முறையில் மூலக் குறிப்புகளுடன் மறுபகிர்வு செய்ய அனுமதிக்கப்படுகிறது.
+                    </p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                Precision Astronomical Calculations · Designed by Siddharthan VP • Provided free for educational & research purposes, contact e-mail : <a href="mailto:vps18@yahoo.com" class="footer-link">vps18@yahoo.com</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal for House Inspection -->
+    <div class="modal-overlay" id="houseModal" onclick="closeHouseModal(event)">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeHouseModal()">&times;</button>
+            <div id="modalHouseContent">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/icons.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

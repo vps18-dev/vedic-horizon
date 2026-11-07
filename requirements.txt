@@ -1,0 +1,9 @@
+Flask>=3.0.0
+flask-cors>=4.0.0
+gunicorn>=21.0.0
+pyswisseph>=2.10.3.2
+PyJHora>=4.8.7
+timezonefinder>=6.5.0
+pytz>=2024.1
+requests>=2.31.0
+Werkzeug>=3.0.0
