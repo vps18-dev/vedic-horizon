@@ -2,6 +2,15 @@ import os
 from datetime import date, datetime
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+import jhora.panchanga.drik as drik
+# Monkeypatch drik.vaara to allow place=None (fixes PyPI PyJHora bug in main.py)
+_orig_drik_vaara = drik.vaara
+def _safe_drik_vaara(jd, place=None, show_vedic_day=True):
+    if place is None:
+        return drik.civil_weekday(jd)
+    return _orig_drik_vaara(jd, place, show_vedic_day)
+drik.vaara = _safe_drik_vaara
+
 from vedic_engine import VedicHoroscopeEngine, calculate_kundali_matching, EPHE_DIR, AYANAMSA_MAP
 from transit_engine import calculate_live_transits
 from progression_engine import calculate_dasa_progression, PVR_PAPER_EXAMPLES, DIVISIONAL_FACTORS

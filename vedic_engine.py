@@ -8,6 +8,15 @@ import math
 from datetime import datetime, date
 import swisseph as swe
 from jhora.panchanga import drik
+
+# Monkeypatch drik.vaara to allow place=None (fixes PyPI PyJHora bug where main.py calls drik.vaara(jd))
+_orig_drik_vaara = drik.vaara
+def _safe_drik_vaara(jd, place=None, show_vedic_day=True):
+    if place is None:
+        return drik.civil_weekday(jd)
+    return _orig_drik_vaara(jd, place, show_vedic_day)
+drik.vaara = _safe_drik_vaara
+
 from jhora import utils
 from jhora.horoscope.main import Horoscope
 from jhora.horoscope.chart import charts, ashtakavarga, strength, house, dosha, raja_yoga
