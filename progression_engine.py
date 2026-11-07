@@ -25,7 +25,7 @@ from jhora.horoscope.dhasa.graha import vimsottari
 from jhora.horoscope.chart import charts
 from vedic_constants import RASHIS, GRAHAS, NAKSHATRAS, BHAVAS
 
-EPHE_DIR = "ephe"
+from vedic_engine import EPHE_DIR
 swe.set_ephe_path(EPHE_DIR)
 
 AYANAMSA_MAP = {

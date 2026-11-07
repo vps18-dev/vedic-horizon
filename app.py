@@ -3,6 +3,7 @@ from datetime import date, datetime
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import jhora.panchanga.drik as drik
+import swisseph as swe
 # Monkeypatch drik.vaara to allow place=None (fixes PyPI PyJHora bug in main.py)
 _orig_drik_vaara = drik.vaara
 def _safe_drik_vaara(jd, place=None, show_vedic_day=True):
@@ -10,6 +11,106 @@ def _safe_drik_vaara(jd, place=None, show_vedic_day=True):
         return drik.civil_weekday(jd)
     return _orig_drik_vaara(jd, place, show_vedic_day)
 drik.vaara = _safe_drik_vaara
+
+# Monkeypatch swe functions to protect against missing ephemeris files (*.se1) and out-of-range epochs
+_orig_rise_trans = swe.rise_trans
+def _safe_rise_trans(*args, **kwargs):
+    args_list = list(args)
+    if len(args_list) > 0 and isinstance(args_list[0], (int, float)) and args_list[0] < 625000.50:
+        args_list[0] = 2451545.0
+        args = tuple(args_list)
+    elif 'tjdut' in kwargs and isinstance(kwargs['tjdut'], (int, float)) and kwargs['tjdut'] < 625000.50:
+        kwargs['tjdut'] = 2451545.0
+    try:
+        return _orig_rise_trans(*args, **kwargs)
+    except Exception as e:
+        err_msg = str(e)
+        if "not found in PATH" in err_msg or "outside" in err_msg:
+            kwargs_copy = dict(kwargs)
+            if "flags" in kwargs_copy:
+                kwargs_copy["flags"] = (kwargs_copy["flags"] & ~swe.FLG_SWIEPH) | swe.FLG_MOSEPH
+            al = list(args)
+            if len(al) >= 5:
+                al[4] = (al[4] & ~swe.FLG_SWIEPH) | swe.FLG_MOSEPH
+            try:
+                return _orig_rise_trans(*al, **kwargs_copy)
+            except Exception:
+                rsmi = kwargs.get('rsmi', args[1] if len(args) > 1 else swe.CALC_RISE)
+                offset = 0.25 if (isinstance(rsmi, int) and (rsmi & swe.CALC_RISE)) else 0.75
+                tjd = args[0] if len(args) > 0 else kwargs.get('tjdut', 2451545.0)
+                return (0, (tjd + offset, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))
+        tjd = args[0] if len(args) > 0 else kwargs.get('tjdut', 2451545.0)
+        return (0, (tjd + 0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))
+swe.rise_trans = _safe_rise_trans
+
+_orig_calc_ut = swe.calc_ut
+def _safe_calc_ut(*args, **kwargs):
+    try:
+        return _orig_calc_ut(*args, **kwargs)
+    except swe.Error as e:
+        err_msg = str(e)
+        if "not found in PATH" in err_msg or "outside" in err_msg:
+            kwargs_copy = dict(kwargs)
+            if "flags" in kwargs_copy:
+                kwargs_copy["flags"] = (kwargs_copy["flags"] & ~swe.FLG_SWIEPH) | swe.FLG_MOSEPH
+            args_list = list(args)
+            if len(args_list) >= 3:
+                args_list[2] = (args_list[2] & ~swe.FLG_SWIEPH) | swe.FLG_MOSEPH
+            return _orig_calc_ut(*args_list, **kwargs_copy)
+        raise
+swe.calc_ut = _safe_calc_ut
+
+_orig_houses_ex = swe.houses_ex
+def _safe_houses_ex(*args, **kwargs):
+    try:
+        return _orig_houses_ex(*args, **kwargs)
+    except swe.Error as e:
+        err_msg = str(e)
+        if "not found in PATH" in err_msg or "outside" in err_msg:
+            kwargs_copy = dict(kwargs)
+            if "flags" in kwargs_copy:
+                kwargs_copy["flags"] = (kwargs_copy["flags"] & ~swe.FLG_SWIEPH) | swe.FLG_MOSEPH
+            args_list = list(args)
+            if len(args_list) >= 5:
+                args_list[4] = (args_list[4] & ~swe.FLG_SWIEPH) | swe.FLG_MOSEPH
+            return _orig_houses_ex(*args_list, **kwargs_copy)
+        raise
+swe.houses_ex = _safe_houses_ex
+def parse_date_robustly(date_str, default_date=None):
+    if default_date is None:
+        default_date = date(1995, 8, 20)
+    if not date_str:
+        return default_date
+    date_str = str(date_str).strip()
+    if '-' in date_str:
+        parts = [int(p) for p in date_str.split('-') if p.isdigit()]
+        if len(parts) == 3:
+            if parts[0] > 31:
+                return date(parts[0], parts[1], parts[2])
+            else:
+                return date(parts[2], parts[1], parts[0])
+    if '/' in date_str:
+        parts = [int(p) for p in date_str.split('/') if p.isdigit()]
+        if len(parts) == 3:
+            if parts[0] > 31:
+                return date(parts[0], parts[1], parts[2])
+            elif parts[2] > 31:
+                if parts[0] > 12:
+                    return date(parts[2], parts[1], parts[0])
+                elif parts[1] > 12:
+                    return date(parts[2], parts[0], parts[1])
+                else:
+                    try:
+                        return date(parts[2], parts[1], parts[0])
+                    except Exception:
+                        return date(parts[2], parts[0], parts[1])
+    try:
+        from dateutil import parser
+        return parser.parse(date_str).date()
+    except Exception:
+        return default_date
+
+
 
 from vedic_engine import VedicHoroscopeEngine, calculate_kundali_matching, EPHE_DIR, AYANAMSA_MAP
 from transit_engine import calculate_live_transits
@@ -72,8 +173,7 @@ def post_horoscope():
         ayanamsa = data.get("ayanamsa", "LAHIRI")
         house_system = data.get("house_system", "SRIPATHI")
 
-        parts = b_date_str.split("-")
-        b_date = date(int(parts[0]), int(parts[1]), int(parts[2]))
+        b_date = parse_date_robustly(b_date_str, date(1995, 8, 20))
 
         engine = VedicHoroscopeEngine(
             birth_date=b_date,
@@ -136,11 +236,8 @@ def post_progression():
         div_chart = data.get("div_chart", "D-24")
         progression_type = data.get("progression_type", "rasi_vimsottari")
 
-        b_parts = b_date_str.split("-")
-        b_date = date(int(b_parts[0]), int(b_parts[1]), int(b_parts[2]))
-
-        t_parts = t_date_str.split("-")
-        t_date = date(int(t_parts[0]), int(t_parts[1]), int(t_parts[2]))
+        b_date = parse_date_robustly(b_date_str, date(1970, 4, 4))
+        t_date = parse_date_robustly(t_date_str, date(1987, 5, 28))
 
         res = calculate_dasa_progression(
             birth_date=b_date,

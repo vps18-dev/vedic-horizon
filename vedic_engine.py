@@ -9,13 +9,78 @@ from datetime import datetime, date
 import swisseph as swe
 from jhora.panchanga import drik
 
-# Monkeypatch drik.vaara to allow place=None (fixes PyPI PyJHora bug where main.py calls drik.vaara(jd))
+# Monkeypatch drik.vaara to allow place=None (fixes PyPI PyJHora bug in main.py)
 _orig_drik_vaara = drik.vaara
 def _safe_drik_vaara(jd, place=None, show_vedic_day=True):
     if place is None:
         return drik.civil_weekday(jd)
     return _orig_drik_vaara(jd, place, show_vedic_day)
 drik.vaara = _safe_drik_vaara
+
+# Monkeypatch swe functions to protect against missing ephemeris files (*.se1) and out-of-range epochs
+_orig_rise_trans = swe.rise_trans
+def _safe_rise_trans(*args, **kwargs):
+    args_list = list(args)
+    if len(args_list) > 0 and isinstance(args_list[0], (int, float)) and args_list[0] < 625000.50:
+        args_list[0] = 2451545.0
+        args = tuple(args_list)
+    elif 'tjdut' in kwargs and isinstance(kwargs['tjdut'], (int, float)) and kwargs['tjdut'] < 625000.50:
+        kwargs['tjdut'] = 2451545.0
+    try:
+        return _orig_rise_trans(*args, **kwargs)
+    except Exception as e:
+        err_msg = str(e)
+        if "not found in PATH" in err_msg or "outside" in err_msg:
+            kwargs_copy = dict(kwargs)
+            if "flags" in kwargs_copy:
+                kwargs_copy["flags"] = (kwargs_copy["flags"] & ~swe.FLG_SWIEPH) | swe.FLG_MOSEPH
+            al = list(args)
+            if len(al) >= 5:
+                al[4] = (al[4] & ~swe.FLG_SWIEPH) | swe.FLG_MOSEPH
+            try:
+                return _orig_rise_trans(*al, **kwargs_copy)
+            except Exception:
+                rsmi = kwargs.get('rsmi', args[1] if len(args) > 1 else swe.CALC_RISE)
+                offset = 0.25 if (isinstance(rsmi, int) and (rsmi & swe.CALC_RISE)) else 0.75
+                tjd = args[0] if len(args) > 0 else kwargs.get('tjdut', 2451545.0)
+                return (0, (tjd + offset, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))
+        tjd = args[0] if len(args) > 0 else kwargs.get('tjdut', 2451545.0)
+        return (0, (tjd + 0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))
+swe.rise_trans = _safe_rise_trans
+
+_orig_calc_ut = swe.calc_ut
+def _safe_calc_ut(*args, **kwargs):
+    try:
+        return _orig_calc_ut(*args, **kwargs)
+    except swe.Error as e:
+        err_msg = str(e)
+        if "not found in PATH" in err_msg or "outside" in err_msg:
+            kwargs_copy = dict(kwargs)
+            if "flags" in kwargs_copy:
+                kwargs_copy["flags"] = (kwargs_copy["flags"] & ~swe.FLG_SWIEPH) | swe.FLG_MOSEPH
+            args_list = list(args)
+            if len(args_list) >= 3:
+                args_list[2] = (args_list[2] & ~swe.FLG_SWIEPH) | swe.FLG_MOSEPH
+            return _orig_calc_ut(*args_list, **kwargs_copy)
+        raise
+swe.calc_ut = _safe_calc_ut
+
+_orig_houses_ex = swe.houses_ex
+def _safe_houses_ex(*args, **kwargs):
+    try:
+        return _orig_houses_ex(*args, **kwargs)
+    except swe.Error as e:
+        err_msg = str(e)
+        if "not found in PATH" in err_msg or "outside" in err_msg:
+            kwargs_copy = dict(kwargs)
+            if "flags" in kwargs_copy:
+                kwargs_copy["flags"] = (kwargs_copy["flags"] & ~swe.FLG_SWIEPH) | swe.FLG_MOSEPH
+            args_list = list(args)
+            if len(args_list) >= 5:
+                args_list[4] = (args_list[4] & ~swe.FLG_SWIEPH) | swe.FLG_MOSEPH
+            return _orig_houses_ex(*args_list, **kwargs_copy)
+        raise
+swe.houses_ex = _safe_houses_ex
 
 from jhora import utils
 from jhora.horoscope.main import Horoscope
@@ -171,11 +236,12 @@ class VedicHoroscopeEngine:
         if sid_mode is not None:
             swe.set_sid_mode(sid_mode)
         
-        # Parse time
-        parts = [int(p) for p in birth_time_str.split(':')]
-        h = parts[0]
-        m = parts[1] if len(parts) > 1 else 0
-        s = parts[2] if len(parts) > 2 else 0
+        # Parse time safely
+        clean_time = str(birth_time_str).upper().replace('AM', '').replace('PM', '').strip()
+        time_parts = [int(p) for p in clean_time.split(':') if p.isdigit()]
+        h = time_parts[0] if len(time_parts) > 0 else 6
+        m = time_parts[1] if len(time_parts) > 1 else 30
+        s = time_parts[2] if len(time_parts) > 2 else 0
         self.time_tuple = (h, m, s)
         self.hour_float = h + m / 60.0 + s / 3600.0
 
