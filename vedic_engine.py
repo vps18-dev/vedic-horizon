@@ -977,6 +977,24 @@ class VedicHoroscopeEngine:
         ashtakavarga_data = self.calculate_ashtakavarga()
         yogas_doshas = self.calculate_yogas_and_doshas()
 
+        try:
+            from kerala_jothidam import analyze_kerala_jothidam
+            kerala_data = analyze_kerala_jothidam({
+                "planets": planets,
+                "divisional_charts": div_charts
+            })
+            for ky in kerala_data.get("kerala_yogas", []):
+                if not any(y.get("name") == ky.get("name") for y in yogas_doshas.get("yogas", [])):
+                    yogas_doshas.setdefault("yogas", []).append({
+                        "name": ky.get("name"),
+                        "type": ky.get("category", "Kerala Yoga (மணிகண்ட கேரளம்)"),
+                        "description": ky.get("description"),
+                        "is_present": True
+                    })
+        except Exception as e:
+            print("Error calculating Kerala Jothidam:", e)
+            kerala_data = {}
+
         return {
             "meta": {
                 "name": self.place_name,
@@ -996,7 +1014,8 @@ class VedicHoroscopeEngine:
             "dasha": dasha,
             "shadbala": shadbala,
             "ashtakavarga": ashtakavarga_data,
-            "yogas_and_doshas": yogas_doshas
+            "yogas_and_doshas": yogas_doshas,
+            "kerala_jothidam": kerala_data
         }
 
 def calculate_kundali_matching(boy_nakshatra_num: int, boy_pada: int,

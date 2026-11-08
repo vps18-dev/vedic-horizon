@@ -415,6 +415,9 @@ function renderAllSections(data) {
 
     // 7. Yogas & Doshas
     renderYogasAndDoshas(data.yogas_and_doshas);
+        if (data.kerala_jothidam) {
+            renderKeralaJothidam(data.kerala_jothidam);
+        }
 }
 
 function updateChartSidebar(chartData) {
@@ -2012,6 +2015,157 @@ function renderProgressionResults(data) {
                 </td>
             `;
             tableBody.appendChild(tr);
+        });
+    }
+}
+
+
+/**
+ * Renders Mani Kanda Kerala Jothidam Yogas, 12 Bhavas, and Longevity / Dosha Shield
+ */
+function renderKeralaJothidam(kd) {
+    if (!kd) return;
+
+    // 1. Render Kerala Yogas
+    const yogasGrid = document.getElementById("keralaYogasGrid");
+    if (yogasGrid) {
+        yogasGrid.innerHTML = "";
+        const yogas = kd.kerala_yogas || [];
+        if (yogas.length === 0) {
+            yogasGrid.innerHTML = `<div style="color:var(--text-secondary); padding: 12px;">No primary Agastya Kerala royal yogas triggered for this planetary alignment.</div>`;
+        } else {
+            yogas.forEach(y => {
+                const card = document.createElement("div");
+                card.className = "yoga-card";
+                card.style.borderLeft = "4px solid var(--gold-bright)";
+                card.innerHTML = `
+                    <div class="yoga-title" style="color:var(--gold-bright);">
+                        <span>✨</span> ${y.name}
+                    </div>
+                    <div style="font-size:0.75rem; color:#34d399; font-weight:700; margin-bottom:6px;">
+                        ${y.category} • ${y.tamil_name}
+                    </div>
+                    <div class="yoga-desc" style="line-height:1.6;">
+                        ${y.description}
+                    </div>
+                `;
+                yogasGrid.appendChild(card);
+            });
+        }
+    }
+
+    // 2. Render Longevity & Dosha Shield
+    const longevBox = document.getElementById("keralaLongevityBox");
+    if (longevBox && kd.longevity_and_dosha) {
+        const ld = kd.longevity_and_dosha;
+        let protectiveHtml = "";
+        if (ld.dosha_nivarthi && ld.dosha_nivarthi.length > 0) {
+            protectiveHtml = ld.dosha_nivarthi.map(p => `<li style="margin-bottom:6px;">${p}</li>`).join("");
+        }
+
+        longevBox.innerHTML = `
+            <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 16px;">
+                <div>
+                    <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary);">
+                        Classical Longevity Assessment / ஆயுள் பலம் (மணிகண்ட கேரளம் அத்தியாயம் 44)
+                    </div>
+                    <div style="font-size: 1.25rem; font-weight: 800; color: #34d399; margin-top: 4px;">
+                        ${ld.longevity_classification}
+                    </div>
+                    <div style="font-size: 0.85rem; color: var(--gold-bright); margin-top: 4px;">
+                        ${ld.longevity_tamil}
+                    </div>
+                </div>
+                <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 10px 16px; text-align: right;">
+                    <div style="font-size: 0.75rem; color: #38bdf8; font-weight: 700;">Lagna Nature</div>
+                    <div style="font-size: 0.95rem; font-weight: 700; color: #fff;">${ld.lagna_mobility}</div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 16px;">
+                <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px 16px;">
+                    <div style="font-size: 0.8rem; color: #f87171; font-weight: 700; margin-bottom: 4px;">
+                        ⚠️ Badhaka Sthanam (பாதக ஸ்தானம் & அதிபதி)
+                    </div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 4px;">
+                        ${ld.badhaka_rule}
+                    </div>
+                    <div style="font-size: 0.95rem; font-weight: 600; color: #fff;">
+                        ${ld.badhaka_sign} (${ld.badhaka_sign_tamil}) • ${ld.badhaka_lord}
+                    </div>
+                </div>
+
+                <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px 16px;">
+                    <div style="font-size: 0.8rem; color: #fbbf24; font-weight: 700; margin-bottom: 4px;">
+                        ⚔️ Maraka Lords (மாரகாதிபதிகள் - 2 & 7 வீடுகள்)
+                    </div>
+                    <div style="font-size: 0.9rem; color: #fff; margin-top: 6px;">
+                        ${ld.maraka_lords.join(" • ")}
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: rgba(52, 211, 153, 0.06); border-left: 3px solid #34d399; border-radius: 6px; padding: 12px 16px;">
+                <div style="font-size: 0.85rem; font-weight: 700; color: #34d399; margin-bottom: 6px;">
+                    🛡️ Protective Shield & Dosha Nivarthi (தோஷ நிவர்த்தி & இறை பாதுகாப்பு):
+                </div>
+                <ul style="margin: 0; padding-left: 20px; font-size: 0.85rem; color: var(--text-primary); line-height: 1.6;">
+                    ${protectiveHtml}
+                </ul>
+            </div>
+        `;
+    }
+
+    // 3. Render 12 Bhavas
+    const bhavasGrid = document.getElementById("keralaBhavasGrid");
+    if (bhavasGrid) {
+        bhavasGrid.innerHTML = "";
+        const bhavas = kd.bhava_predictions || [];
+        bhavas.forEach(b => {
+            const card = document.createElement("div");
+            card.style.cssText = "background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 10px;";
+            
+            const occupantsText = (b.occupants && b.occupants.length > 0)
+                ? b.occupants.join(", ")
+                : "None (கிரகங்கள் இல்லை)";
+
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.95rem; color: var(--gold-bright);">
+                            ${b.house_number}. ${b.bhava_name}
+                        </div>
+                        <div style="font-size: 0.8rem; color: #38bdf8; font-weight: 600;">
+                            ${b.bhava_tamil}
+                        </div>
+                    </div>
+                    <span style="font-size: 0.7rem; background: rgba(212, 175, 55, 0.15); color: var(--gold-bright); padding: 2px 8px; border-radius: 12px; font-weight: 700;">
+                        ${b.chapter}
+                    </span>
+                </div>
+
+                <div style="font-size: 0.8rem; display: flex; flex-wrap: wrap; gap: 8px; background: rgba(255, 255, 255, 0.03); padding: 8px 10px; border-radius: 6px;">
+                    <div><span style="color: var(--text-secondary);">Sign:</span> <strong>${b.sign_name} (${b.sign_tamil})</strong></div>
+                    <div>•</div>
+                    <div><span style="color: var(--text-secondary);">Lord:</span> <strong>${b.lord_name} (${b.lord_tamil})</strong> in <strong>H-${b.lord_placed_house}</strong> (${b.lord_dignity})</div>
+                    <div>•</div>
+                    <div><span style="color: var(--text-secondary);">Occupants:</span> <strong>${occupantsText}</strong></div>
+                </div>
+
+                <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
+                    ${b.significations}
+                </div>
+
+                <div style="background: rgba(212, 175, 55, 0.08); border-left: 3px solid var(--gold-bright); border-radius: 4px; padding: 8px 12px; margin-top: auto;">
+                    <div style="font-size: 0.85rem; font-weight: 600; color: #fff; line-height: 1.5; margin-bottom: 4px;">
+                        📜 ${b.prediction.tamil}
+                    </div>
+                    <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.4;">
+                        ${b.prediction.english}
+                    </div>
+                </div>
+            `;
+            bhavasGrid.appendChild(card);
         });
     }
 }
