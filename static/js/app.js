@@ -418,6 +418,12 @@ function renderAllSections(data) {
         if (data.kerala_jothidam) {
             renderKeralaJothidam(data.kerala_jothidam);
         }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const initTab = urlParams.get('tab');
+        if (initTab) {
+            switchTab(initTab);
+        }
 }
 
 function updateChartSidebar(chartData) {
