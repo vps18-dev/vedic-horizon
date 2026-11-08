@@ -2038,20 +2038,29 @@ function renderKeralaJothidam(kd) {
         yogasGrid.innerHTML = "";
         const yogas = kd.kerala_yogas || [];
         if (yogas.length === 0) {
-            yogasGrid.innerHTML = `<div style="color:var(--text-secondary); padding: 12px;">No primary Agastya Kerala royal yogas triggered for this planetary alignment.</div>`;
+            yogasGrid.innerHTML = `<div style="color:var(--text-secondary); padding: 16px; font-size: 1rem;">No primary Agastya Kerala royal yogas triggered for this planetary alignment.</div>`;
         } else {
             yogas.forEach(y => {
                 const card = document.createElement("div");
                 card.className = "yoga-card";
-                card.style.borderLeft = "4px solid var(--gold-bright)";
+                card.style.border = "1.5px solid var(--border-gold)";
+                card.style.borderLeft = "6px solid var(--gold-primary)";
+                card.style.background = "var(--bg-card)";
+                card.style.padding = "20px";
+                card.style.boxShadow = "var(--shadow-card)";
                 card.innerHTML = `
-                    <div class="yoga-title" style="color:var(--gold-bright);">
+                    <div class="yoga-title" style="color:var(--gold-bright); font-size:1.2rem; font-weight:800; font-family:var(--font-serif); margin-bottom:6px;">
                         <span>✨</span> ${y.name}
                     </div>
-                    <div style="font-size:0.75rem; color:#34d399; font-weight:700; margin-bottom:6px;">
-                        ${y.category} • ${y.tamil_name}
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px;">
+                        <span style="font-size:0.82rem; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; padding:2px 10px; border-radius:12px; font-weight:700;">
+                            ${y.category}
+                        </span>
+                        <span style="font-size:0.88rem; color:#0284c7; font-weight:700;">
+                            ${y.tamil_name}
+                        </span>
                     </div>
-                    <div class="yoga-desc" style="line-height:1.6;">
+                    <div class="yoga-desc" style="color:var(--text-primary); font-size:0.96rem; line-height:1.65; font-weight:500;">
                         ${y.description}
                     </div>
                 `;
@@ -2066,56 +2075,66 @@ function renderKeralaJothidam(kd) {
         const ld = kd.longevity_and_dosha;
         let protectiveHtml = "";
         if (ld.dosha_nivarthi && ld.dosha_nivarthi.length > 0) {
-            protectiveHtml = ld.dosha_nivarthi.map(p => `<li style="margin-bottom:6px;">${p}</li>`).join("");
+            protectiveHtml = ld.dosha_nivarthi.map(p => `
+                <li style="margin-bottom:8px; font-size:0.94rem; color:var(--text-primary); line-height:1.6; font-weight:500;">
+                    ${p}
+                </li>
+            `).join("");
         }
 
+        longevBox.style.background = "var(--bg-card)";
+        longevBox.style.border = "1.5px solid var(--border-gold)";
+        longevBox.style.borderRadius = "var(--radius-md)";
+        longevBox.style.padding = "24px";
+        longevBox.style.boxShadow = "var(--shadow-card)";
+
         longevBox.innerHTML = `
-            <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 16px;">
+            <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; border-bottom: 1.5px solid var(--border-gold); padding-bottom: 18px; margin-bottom: 20px;">
                 <div>
-                    <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary);">
+                    <div style="font-size: 0.85rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.06em; color: var(--gold-bright);">
                         Classical Longevity Assessment / ஆயுள் பலம் (மணிகண்ட கேரளம் அத்தியாயம் 44)
                     </div>
-                    <div style="font-size: 1.25rem; font-weight: 800; color: #34d399; margin-top: 4px;">
+                    <div style="font-size: 1.35rem; font-weight: 800; color: #047857; margin-top: 6px;">
                         ${ld.longevity_classification}
                     </div>
-                    <div style="font-size: 0.85rem; color: var(--gold-bright); margin-top: 4px;">
+                    <div style="font-size: 0.95rem; font-weight: 700; color: #7c2d12; margin-top: 6px; line-height: 1.5;">
                         ${ld.longevity_tamil}
                     </div>
                 </div>
-                <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 10px 16px; text-align: right;">
-                    <div style="font-size: 0.75rem; color: #38bdf8; font-weight: 700;">Lagna Nature</div>
-                    <div style="font-size: 0.95rem; font-weight: 700; color: #fff;">${ld.lagna_mobility}</div>
+                <div style="background: rgba(2, 132, 199, 0.08); border: 1.5px solid rgba(2, 132, 199, 0.3); border-radius: 8px; padding: 12px 20px; text-align: right;">
+                    <div style="font-size: 0.8rem; color: #0284c7; font-weight: 800; text-transform: uppercase;">Lagna Nature</div>
+                    <div style="font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">${ld.lagna_mobility}</div>
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 16px;">
-                <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px 16px;">
-                    <div style="font-size: 0.8rem; color: #f87171; font-weight: 700; margin-bottom: 4px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-bottom: 20px;">
+                <div style="background: rgba(220, 38, 38, 0.06); border: 1.5px solid rgba(220, 38, 38, 0.25); border-radius: 8px; padding: 16px 18px;">
+                    <div style="font-size: 0.92rem; color: #b91c1c; font-weight: 800; margin-bottom: 6px;">
                         ⚠️ Badhaka Sthanam (பாதக ஸ்தானம் & அதிபதி)
                     </div>
-                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 4px;">
+                    <div style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600;">
                         ${ld.badhaka_rule}
                     </div>
-                    <div style="font-size: 0.95rem; font-weight: 600; color: #fff;">
+                    <div style="font-size: 1rem; font-weight: 800; color: #7f1d1d;">
                         ${ld.badhaka_sign} (${ld.badhaka_sign_tamil}) • ${ld.badhaka_lord}
                     </div>
                 </div>
 
-                <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px 16px;">
-                    <div style="font-size: 0.8rem; color: #fbbf24; font-weight: 700; margin-bottom: 4px;">
+                <div style="background: rgba(217, 119, 6, 0.06); border: 1.5px solid rgba(217, 119, 6, 0.25); border-radius: 8px; padding: 16px 18px;">
+                    <div style="font-size: 0.92rem; color: #b45309; font-weight: 800; margin-bottom: 6px;">
                         ⚔️ Maraka Lords (மாரகாதிபதிகள் - 2 & 7 வீடுகள்)
                     </div>
-                    <div style="font-size: 0.9rem; color: #fff; margin-top: 6px;">
+                    <div style="font-size: 0.98rem; font-weight: 800; color: #78350f; margin-top: 8px;">
                         ${ld.maraka_lords.join(" • ")}
                     </div>
                 </div>
             </div>
 
-            <div style="background: rgba(52, 211, 153, 0.06); border-left: 3px solid #34d399; border-radius: 6px; padding: 12px 16px;">
-                <div style="font-size: 0.85rem; font-weight: 700; color: #34d399; margin-bottom: 6px;">
+            <div style="background: rgba(5, 150, 105, 0.08); border-left: 5px solid #059669; border-radius: 8px; padding: 16px 20px;">
+                <div style="font-size: 0.98rem; font-weight: 800; color: #065f46; margin-bottom: 10px;">
                     🛡️ Protective Shield & Dosha Nivarthi (தோஷ நிவர்த்தி & இறை பாதுகாப்பு):
                 </div>
-                <ul style="margin: 0; padding-left: 20px; font-size: 0.85rem; color: var(--text-primary); line-height: 1.6;">
+                <ul style="margin: 0; padding-left: 22px;">
                     ${protectiveHtml}
                 </ul>
             </div>
@@ -2129,44 +2148,54 @@ function renderKeralaJothidam(kd) {
         const bhavas = kd.bhava_predictions || [];
         bhavas.forEach(b => {
             const card = document.createElement("div");
-            card.style.cssText = "background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 10px;";
+            card.style.cssText = `
+                background: var(--bg-card);
+                border: 1.5px solid var(--border-gold);
+                border-radius: var(--radius-md);
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+                box-shadow: var(--shadow-card);
+                transition: var(--transition);
+            `;
             
             const occupantsText = (b.occupants && b.occupants.length > 0)
                 ? b.occupants.join(", ")
                 : "None (கிரகங்கள் இல்லை)";
 
             card.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1.5px solid var(--border-gold); padding-bottom: 12px;">
                     <div>
-                        <div style="font-weight: 800; font-size: 0.95rem; color: var(--gold-bright);">
+                        <div style="font-weight: 800; font-size: 1.12rem; color: var(--gold-bright); font-family: var(--font-serif);">
                             ${b.house_number}. ${b.bhava_name}
                         </div>
-                        <div style="font-size: 0.8rem; color: #38bdf8; font-weight: 600;">
+                        <div style="font-size: 0.94rem; color: #0284c7; font-weight: 700; margin-top: 2px;">
                             ${b.bhava_tamil}
                         </div>
                     </div>
-                    <span style="font-size: 0.7rem; background: rgba(212, 175, 55, 0.15); color: var(--gold-bright); padding: 2px 8px; border-radius: 12px; font-weight: 700;">
+                    <span style="font-size: 0.78rem; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; padding: 3px 10px; border-radius: 12px; font-weight: 800; white-space: nowrap;">
                         ${b.chapter}
                     </span>
                 </div>
 
-                <div style="font-size: 0.8rem; display: flex; flex-wrap: wrap; gap: 8px; background: rgba(255, 255, 255, 0.03); padding: 8px 10px; border-radius: 6px;">
-                    <div><span style="color: var(--text-secondary);">Sign:</span> <strong>${b.sign_name} (${b.sign_tamil})</strong></div>
-                    <div>•</div>
-                    <div><span style="color: var(--text-secondary);">Lord:</span> <strong>${b.lord_name} (${b.lord_tamil})</strong> in <strong>H-${b.lord_placed_house}</strong> (${b.lord_dignity})</div>
-                    <div>•</div>
-                    <div><span style="color: var(--text-secondary);">Occupants:</span> <strong>${occupantsText}</strong></div>
+                <div style="font-size: 0.88rem; display: flex; flex-wrap: wrap; gap: 10px; background: var(--card-sub-bg, #fdfbf7); border: 1px solid var(--border-gold); padding: 10px 14px; border-radius: 6px; color: var(--text-primary); font-weight: 500;">
+                    <div><span style="color: var(--text-secondary); font-weight: 600;">Sign:</span> <strong>${b.sign_name} (${b.sign_tamil})</strong></div>
+                    <div style="color: var(--border-gold);">|</div>
+                    <div><span style="color: var(--text-secondary); font-weight: 600;">Lord:</span> <strong>${b.lord_name} (${b.lord_tamil})</strong> in <strong>H-${b.lord_placed_house}</strong> (${b.lord_dignity})</div>
+                    <div style="color: var(--border-gold);">|</div>
+                    <div><span style="color: var(--text-secondary); font-weight: 600;">Occupants:</span> <strong>${occupantsText}</strong></div>
                 </div>
 
-                <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
+                <div style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.55; font-style: italic;">
                     ${b.significations}
                 </div>
 
-                <div style="background: rgba(212, 175, 55, 0.08); border-left: 3px solid var(--gold-bright); border-radius: 4px; padding: 8px 12px; margin-top: auto;">
-                    <div style="font-size: 0.85rem; font-weight: 600; color: #fff; line-height: 1.5; margin-bottom: 4px;">
+                <div style="background: rgba(217, 119, 6, 0.08); border-left: 4.5px solid #b45309; border-radius: 6px; padding: 14px 16px; margin-top: auto;">
+                    <div style="font-size: 0.98rem; font-weight: 700; color: #7c2d12; line-height: 1.65; margin-bottom: 6px;">
                         📜 ${b.prediction.tamil}
                     </div>
-                    <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.4;">
+                    <div style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; font-weight: 500;">
                         ${b.prediction.english}
                     </div>
                 </div>
