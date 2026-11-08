@@ -1,6 +1,6 @@
 import os
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timezone, timedelta
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import jhora.panchanga.drik as drik
@@ -368,6 +368,47 @@ def post_progression():
         import traceback
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/jamakkol", methods=["GET", "POST"])
+def get_jamakkol():
+    try:
+        from jamakkol_engine import calculate_jamakkol_chart
+        if request.method == "POST":
+            data = request.json or {}
+        else:
+            data = request.args.to_dict()
+
+        # If date/time not supplied, default to current local time in India (UTC+5:30)
+        now_dt = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+        q_date_str = data.get("date", now_dt.strftime("%Y-%m-%d"))
+        q_time_str = data.get("time", now_dt.strftime("%H:%M:%S"))
+        place_name = data.get("place", "Chennai, India")
+        lat = float(data.get("lat", 13.0827))
+        lon = float(data.get("lon", 80.2707))
+        tz = float(data.get("tz", 5.5))
+
+        arudam_override = data.get("arudam_sign")
+        if arudam_override is not None and str(arudam_override).strip() != "":
+            arudam_override = int(arudam_override)
+        else:
+            arudam_override = None
+
+        q_date = parse_date_robustly(q_date_str, now_dt.date())
+
+        res = calculate_jamakkol_chart(
+            query_date=q_date,
+            query_time_str=q_time_str,
+            place_name=place_name,
+            lat=lat,
+            lon=lon,
+            tz=tz,
+            arudam_override=arudam_override
+        )
+        return jsonify(res)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/api/reference", methods=["GET"])
 def get_reference():

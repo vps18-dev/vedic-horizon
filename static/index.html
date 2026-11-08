@@ -172,6 +172,9 @@
             <button class="tab-btn" onclick="switchTab('tabKerala')">
                     <span>📜</span> Mani Kanda Kerala Jothidam / மணிகண்ட கேரளம்
                 </button>
+                <button class="tab-btn" onclick="switchTab('tabJamakkol')">
+                    <span>🧭</span> Jamakkol Arudam / ஜாமக்கோள் ஆருடம்
+                </button>
                 <button class="tab-btn" onclick="switchTab('tabMilan')">
                 <span>💍</span> Marriage Compatibility / திருமணப் பொருத்தம்
             </button>
@@ -926,6 +929,167 @@
                 <!-- Populated by JS -->
             </div>
         </div>
+
+        <!-- TAB: JAMAKKOL ARUDAM (ஜாமக்கோள் ஆருடம்) -->
+        <div id="tabJamakkol" class="tab-pane">
+            <div class="single-page-section-header">
+                <span class="sp-icon">🧭</span>
+                <span class="sp-title">Jamakkol Arudam / ஜாமக்கோள் ஆருட சாஸ்திரம்</span>
+            </div>
+            
+            <!-- Classical Reference Banner -->
+            <div style="background: rgba(212, 175, 55, 0.08); border-left: 4.5px solid #d97706; padding: 16px 20px; border-radius: 8px; margin-bottom: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
+                    <div style="flex: 1; min-width: 280px;">
+                        <div style="font-weight: 800; color: #b45309; font-size: 1.15rem; font-family: var(--font-serif);">
+                            சாமுக்கோள் ஆருடம் (ஜாமக்கோள் பிரசன்ன சாஸ்திரம்) • எஸ். வைத்தியநாதன்
+                        </div>
+                        <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 5px; line-height: 1.6; font-weight: 500;">
+                            Classical horary astrology system dividing day and night into <strong>8 Jaamams (3.75 Nazhigai / 90 mins each)</strong> with 8 outer Jama Grahas traversing the 8 non-fixed signs (Meena, Makara, Dhanus, Thula, Kanni, Kataka, Mithuna, Mesha). Synthesized with the 4 pillars: <strong>Udhayam (உதயம்)</strong>, <strong>Arudam (ஆருடம்)</strong>, <strong>Surya Veedhi (சூரிய வீதி)</strong>, and <strong>Kavippu (கவிப்பு)</strong>.
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-shrink: 0;">
+                        <button class="btn btn-primary" onclick="loadJamakkolNow()" style="background: #d97706; border-color: #b45309; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 6px; box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);">
+                            <span class="live-blink-dot"></span> Live Prasna (Now) / தற்போதைய பிரசன்னம்
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prasna Query Controls Console -->
+            <div style="background: var(--bg-card); border: 1.5px solid var(--border-gold); border-radius: 10px; padding: 18px 22px; margin-bottom: 24px; box-shadow: var(--shadow-card);">
+                <div style="font-weight: 700; color: var(--gold-bright); font-size: 0.98rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                    <span>⚙️</span> Prasna Query Parameters / பிரசன்னக் கணித அமைப்புகள்:
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; align-items: flex-end;">
+                    <div>
+                        <label class="form-label" style="font-size: 0.82rem; font-weight: 600; margin-bottom: 4px;">Date / தேதி:</label>
+                        <input type="date" id="jamakkolDate" class="form-control" style="font-size: 0.88rem; height: 38px;">
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 0.82rem; font-weight: 600; margin-bottom: 4px;">Time / நேரம் (HH:MM:SS):</label>
+                        <input type="time" id="jamakkolTime" step="1" class="form-control" style="font-size: 0.88rem; height: 38px;">
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 0.82rem; font-weight: 600; margin-bottom: 4px;">Place / இடம்:</label>
+                        <input type="text" id="jamakkolPlace" class="form-control" placeholder="Chennai, India" value="Chennai, India" style="font-size: 0.88rem; height: 38px;">
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 0.82rem; font-weight: 600; margin-bottom: 4px;">Arudam Mode / ஆருட தேர்வு:</label>
+                        <select id="jamakkolArudamSelect" class="form-select" style="font-size: 0.88rem; height: 38px;" onchange="onJamakkolArudamChange(this.value)">
+                            <option value="auto" selected>Auto (Time-Division / கால சுழற்சி)</option>
+                            <option value="0">1. மேஷம் (Aries - கிழக்கு)</option>
+                            <option value="1">2. ரிஷபம் (Taurus - தெற்கு)</option>
+                            <option value="2">3. மிதுனம் (Gemini - மேற்கு)</option>
+                            <option value="3">4. கடகம் (Cancer - வடகிழக்கு)</option>
+                            <option value="4">5. சிம்மம் (Leo - தென்கிழக்கு)</option>
+                            <option value="5">6. கன்னி (Virgo - தென்மேற்கு)</option>
+                            <option value="6">7. துலாம் (Libra - வடமேற்கு)</option>
+                            <option value="7">8. விருச்சிகம் (Scorpio - வடகிழக்கு)</option>
+                            <option value="8">9. தனுசு (Sagittarius - தென்கிழக்கு)</option>
+                            <option value="9">10. மகரம் (Capricorn - தென்மேற்கு)</option>
+                            <option value="10">11. கும்பம் (Aquarius - வடமேற்கு)</option>
+                            <option value="11">12. மீனம் (Pisces - வடகிழக்கு)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" onclick="recalculateJamakkol()" style="width: 100%; height: 38px; font-weight: 700; background: var(--gold-primary); border-color: var(--border-gold); color: #fff;">
+                            Recalculate / கணிக்கவும்
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 1: THE 4 MAIN PILLARS (நான்கு தூண்கள்) -->
+            <div style="margin-bottom: 26px;">
+                <h3 style="font-family: var(--font-serif); color: var(--gold-bright); margin-bottom: 14px; font-size: 1.25rem;">
+                    🏛️ The 4 Fundamental Pillars / சாமக்கோள் நான்கு மூலத் தூண்கள்
+                </h3>
+                <div id="jamakkolPillarsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- SECTION 2: 8 JAAMAMS TIMELINE -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; margin-bottom: 26px; box-shadow: var(--shadow-card);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;">
+                    <div>
+                        <h3 style="font-family: var(--font-serif); color: #0284c7; margin: 0; font-size: 1.18rem;">
+                            ⏱️ 8 Jaamams Timeline / நாளின் 8 சாமங்கள் கால அட்டவணை
+                        </h3>
+                        <div id="jaamamTimeRangeText" style="font-size: 0.84rem; color: var(--text-secondary); margin-top: 3px;"></div>
+                    </div>
+                    <div id="jaamamActiveBadge" style="font-size: 0.88rem; font-weight: 700; padding: 5px 14px; border-radius: 16px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">
+                        <!-- Active Jaamam Badge -->
+                    </div>
+                </div>
+                <div id="jaamamTimelineBar" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- SECTION 3: JAMAKKOL DUAL-RING VISUAL CHAKRA & PREDICTIONS -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 24px; margin-bottom: 28px;">
+                
+                <!-- LEFT: DUAL-RING SOUTH INDIAN MANDALA -->
+                <div style="background: var(--bg-card); border: 1.5px solid var(--border-gold); border-radius: 10px; padding: 20px; box-shadow: var(--shadow-card);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <div style="font-weight: 800; color: var(--gold-bright); font-size: 1.08rem; font-family: var(--font-serif);">
+                            ☸ Jamakkol Dual-Ring Chakra / இருவளைய ராசிச் சக்கரம்
+                        </div>
+                        <div style="font-size: 0.78rem; color: var(--text-secondary); font-style: italic;">
+                            Click any sign to select Arudam
+                        </div>
+                    </div>
+                    
+                    <!-- Legend -->
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.8rem; margin-bottom: 14px; background: rgba(212, 175, 55, 0.06); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-gold);">
+                        <span style="display: flex; align-items: center; gap: 4px;"><strong style="color: #f59e0b;">[உத]</strong> Udhayam</span>
+                        <span style="display: flex; align-items: center; gap: 4px;"><strong style="color: #10b981;">[ஆரு]</strong> Arudam</span>
+                        <span style="display: flex; align-items: center; gap: 4px;"><strong style="color: #ef4444;">[கவி]</strong> Kavippu</span>
+                        <span style="display: flex; align-items: center; gap: 4px;"><strong style="color: #6366f1;">[சூ.வீ]</strong> Surya Veedhi</span>
+                        <span style="display: flex; align-items: center; gap: 4px;"><span style="color: #d97706; font-weight: 700;">வெளிக்கட்டம்:</span> 8 Jama Grahas</span>
+                    </div>
+
+                    <!-- 12-Box South Indian Chart Grid -->
+                    <div id="jamakkolChakraGrid" class="jamakkol-chakra-container">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- RIGHT: PREDICTIVE SYNTHESIS & KARIYA SIDDHI -->
+                <div style="display: flex; flex-direction: column; gap: 18px;">
+                    <!-- Kariya Siddhi Verdict Box -->
+                    <div id="jamakkolVerdictBox" style="background: var(--bg-card); border: 1.5px solid var(--border-gold); border-radius: 10px; padding: 20px; box-shadow: var(--shadow-card);">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <!-- Kavippu Obstruction Analysis -->
+                    <div id="jamakkolKavippuAnalysisBox" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; box-shadow: var(--shadow-card);">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 4: DOMAIN, TIMING & REMEDIES -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px;">
+                <!-- Dhatu Moola Jeeva -->
+                <div id="jamakkolDmjBox" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; box-shadow: var(--shadow-card);">
+                    <!-- Populated by JS -->
+                </div>
+
+                <!-- Kala Nirnayam Timing -->
+                <div id="jamakkolTimingBox" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; box-shadow: var(--shadow-card);">
+                    <!-- Populated by JS -->
+                </div>
+
+                <!-- Auspicious Direction & Remedies -->
+                <div id="jamakkolRemediesBox" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; box-shadow: var(--shadow-card);">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
 
     </main>
 

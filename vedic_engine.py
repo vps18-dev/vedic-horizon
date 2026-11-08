@@ -1039,6 +1039,20 @@ class VedicHoroscopeEngine:
             print("Error calculating Kerala Jothidam:", e)
             kerala_data = {}
 
+        try:
+            from jamakkol_engine import calculate_jamakkol_chart
+            jamakkol_data = calculate_jamakkol_chart(
+                query_date=self.birth_date,
+                query_time_str=self.birth_time_str,
+                place_name=self.place_name,
+                lat=self.lat,
+                lon=self.lon,
+                tz=self.tz
+            )
+        except Exception as e:
+            print("Error calculating Jamakkol Arudam:", e)
+            jamakkol_data = {}
+
         return {
             "meta": {
                 "name": self.place_name,
@@ -1059,7 +1073,8 @@ class VedicHoroscopeEngine:
             "shadbala": shadbala,
             "ashtakavarga": ashtakavarga_data,
             "yogas_and_doshas": yogas_doshas,
-            "kerala_jothidam": kerala_data
+            "kerala_jothidam": kerala_data,
+            "jamakkol_arudam": jamakkol_data
         }
 
 def calculate_kundali_matching(boy_nakshatra_num: int, boy_pada: int,

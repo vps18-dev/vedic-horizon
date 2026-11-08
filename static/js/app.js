@@ -316,6 +316,9 @@ function switchTab(tabId) {
     if (tabId === "tabProgression" && !currentProgressionData) {
         calculateProgression();
     }
+    if (tabId === "tabJamakkol" && !currentJamakkolData) {
+        loadJamakkolNow();
+    }
 }
 
 function setChartStyle(style) {
@@ -417,6 +420,10 @@ function renderAllSections(data) {
     renderYogasAndDoshas(data.yogas_and_doshas);
         if (data.kerala_jothidam) {
             renderKeralaJothidam(data.kerala_jothidam);
+        }
+        if (data.jamakkol_arudam && data.jamakkol_arudam.status === 'success') {
+            currentJamakkolData = data.jamakkol_arudam;
+            renderJamakkol(data.jamakkol_arudam);
         }
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -2202,5 +2209,543 @@ function renderKeralaJothidam(kd) {
             `;
             bhavasGrid.appendChild(card);
         });
+    }
+}
+
+/* ==========================================================================
+   JAMAKKOL ARUDAM (ஜாமக்கோள் ஆருடம்) CONTROLLER & RENDERER
+   ========================================================================== */
+
+let currentJamakkolData = null;
+
+function initJamakkolControls() {
+    const now = new Date();
+    const dateInput = document.getElementById("jamakkolDate");
+    const timeInput = document.getElementById("jamakkolTime");
+    const placeInput = document.getElementById("jamakkolPlace");
+
+    if (dateInput && !dateInput.value) {
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+    if (timeInput && !timeInput.value) {
+        const hh = String(now.getHours()).padStart(2, "0");
+        const min = String(now.getMinutes()).padStart(2, "0");
+        const ss = String(now.getSeconds()).padStart(2, "0");
+        timeInput.value = `${hh}:${min}:${ss}`;
+    }
+    if (placeInput && (!placeInput.value || placeInput.value === "Chennai, India") && currentHoroscopeData?.meta?.name) {
+        placeInput.value = currentHoroscopeData.meta.name;
+    }
+}
+
+function loadJamakkolNow() {
+    const now = new Date();
+    const dateInput = document.getElementById("jamakkolDate");
+    const timeInput = document.getElementById("jamakkolTime");
+    const selectArudam = document.getElementById("jamakkolArudamSelect");
+
+    if (dateInput) {
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+    if (timeInput) {
+        const hh = String(now.getHours()).padStart(2, "0");
+        const min = String(now.getMinutes()).padStart(2, "0");
+        const ss = String(now.getSeconds()).padStart(2, "0");
+        timeInput.value = `${hh}:${min}:${ss}`;
+    }
+    if (selectArudam) {
+        selectArudam.value = "auto";
+    }
+
+    recalculateJamakkol();
+}
+
+function onJamakkolArudamChange(val) {
+    recalculateJamakkol();
+}
+
+function setJamakkolArudam(signIdx) {
+    const select = document.getElementById("jamakkolArudamSelect");
+    if (select) {
+        select.value = String(signIdx);
+        recalculateJamakkol();
+    }
+}
+
+async function recalculateJamakkol() {
+    initJamakkolControls();
+    const dateVal = document.getElementById("jamakkolDate")?.value;
+    const timeVal = document.getElementById("jamakkolTime")?.value;
+    const placeVal = document.getElementById("jamakkolPlace")?.value || "Chennai, India";
+    const arudamVal = document.getElementById("jamakkolArudamSelect")?.value;
+
+    let lat = 13.0827;
+    let lon = 80.2707;
+    let tz = 5.5;
+
+    if (currentHoroscopeData?.meta) {
+        lat = currentHoroscopeData.meta.latitude || lat;
+        lon = currentHoroscopeData.meta.longitude || lon;
+        tz = currentHoroscopeData.meta.timezone || tz;
+    }
+
+    const payload = {
+        date: dateVal,
+        time: timeVal,
+        place: placeVal,
+        lat: lat,
+        lon: lon,
+        tz: tz,
+        arudam_sign: arudamVal === "auto" ? null : parseInt(arudamVal, 10)
+    };
+
+    try {
+        const res = await fetch("/api/jamakkol", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.status === "success") {
+            currentJamakkolData = json;
+            renderJamakkol(json);
+        } else {
+            console.error("Jamakkol calculation error:", json.message);
+        }
+    } catch (err) {
+        console.error("Failed to fetch /api/jamakkol:", err);
+    }
+}
+
+function renderJamakkol(data) {
+    if (!data || !data.pillars) return;
+
+    // Sync input controls if present
+    if (data.query_metadata) {
+        const dInput = document.getElementById("jamakkolDate");
+        const tInput = document.getElementById("jamakkolTime");
+        const pInput = document.getElementById("jamakkolPlace");
+        if (dInput && data.query_metadata.date) dInput.value = data.query_metadata.date;
+        if (tInput && data.query_metadata.time) tInput.value = data.query_metadata.time;
+        if (pInput && data.query_metadata.place) pInput.value = data.query_metadata.place;
+    }
+
+    const p = data.pillars;
+    const j = data.jaamam_info;
+    const pred = data.predictions;
+
+    // 1. RENDER THE 4 PILLARS CARDS
+    const pillarsGrid = document.getElementById("jamakkolPillarsGrid");
+    if (pillarsGrid) {
+        pillarsGrid.innerHTML = `
+            <!-- Pillar 1: Udhayam -->
+            <div class="jamakkol-pillar-card" style="border-left: 5px solid #f59e0b;">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <span style="font-size:0.8rem; background:#fef3c7; color:#92400e; font-weight:800; padding:2px 8px; border-radius:12px;">1. UDHAYAM / உதயம்</span>
+                        <span style="font-size:0.8rem; color:#f59e0b; font-weight:700;">★ Querent / ஜாதகர்</span>
+                    </div>
+                    <div style="font-size:1.35rem; font-weight:800; color:var(--text-primary); font-family:var(--font-serif);">
+                        ${p.udhayam.sign_name_ta} <span style="font-size:1.05rem; font-weight:600; color:var(--text-secondary);">(${p.udhayam.sign_name_en})</span>
+                    </div>
+                    <div style="font-size:0.88rem; color:#b45309; font-weight:700; margin-top:2px;">
+                        ${p.udhayam.deg_dms} • ${p.udhayam.nakshatra} (Pada ${p.udhayam.pada})
+                    </div>
+                </div>
+                <div style="margin-top:12px; font-size:0.82rem; background:rgba(0,0,0,0.03); padding:8px 10px; border-radius:6px; line-height:1.5;">
+                    <div><strong>Lord / அதிபதி:</strong> ${p.udhayam.lord_ta} (${p.udhayam.lord_en})</div>
+                    <div><strong>Nature / குணம்:</strong> ${p.udhayam.quality.ta} • ${p.udhayam.dmj.ta}</div>
+                    <div><strong>Direction / திசை:</strong> ${p.udhayam.direction.ta} (${p.udhayam.direction.en})</div>
+                </div>
+                <div style="margin-top:8px; font-size:0.82rem; color:var(--text-secondary); line-height:1.45; font-style:italic;">
+                    ${p.udhayam.description_ta}
+                </div>
+            </div>
+
+            <!-- Pillar 2: Arudam -->
+            <div class="jamakkol-pillar-card" style="border-left: 5px solid #10b981;">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <span style="font-size:0.8rem; background:#ecfdf5; color:#047857; font-weight:800; padding:2px 8px; border-radius:12px;">2. ARUDAM / ஆருடம்</span>
+                        <span style="font-size:0.8rem; color:#10b981; font-weight:700;">★ Question / காரியம்</span>
+                    </div>
+                    <div style="font-size:1.35rem; font-weight:800; color:var(--text-primary); font-family:var(--font-serif);">
+                        ${p.arudam.sign_name_ta} <span style="font-size:1.05rem; font-weight:600; color:var(--text-secondary);">(${p.arudam.sign_name_en})</span>
+                    </div>
+                    <div style="font-size:0.88rem; color:#047857; font-weight:700; margin-top:2px;">
+                        House ${p.arudam.bhava_from_udhayam} from Udhayam (உதயத்திற்கு ${p.arudam.bhava_from_udhayam}ம் பாவம்)
+                    </div>
+                </div>
+                <div style="margin-top:12px; font-size:0.82rem; background:rgba(0,0,0,0.03); padding:8px 10px; border-radius:6px; line-height:1.5;">
+                    <div><strong>Lord / அதிபதி:</strong> ${p.arudam.lord_ta} (${p.arudam.lord_en})</div>
+                    <div><strong>Nature / குணம்:</strong> ${p.arudam.quality.ta} • ${p.arudam.dmj.ta}</div>
+                    <div><strong>Direction / திசை:</strong> ${p.arudam.direction.ta} (${p.arudam.direction.en})</div>
+                </div>
+                <div style="margin-top:8px; font-size:0.82rem; color:var(--text-secondary); line-height:1.45; font-style:italic;">
+                    ${p.arudam.description_ta}
+                </div>
+            </div>
+
+            <!-- Pillar 3: Surya Veedhi -->
+            <div class="jamakkol-pillar-card" style="border-left: 5px solid #6366f1;">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <span style="font-size:0.8rem; background:#eef2ff; color:#3730a3; font-weight:800; padding:2px 8px; border-radius:12px;">3. SURYA VEEDHI / சூரிய வீதி</span>
+                        <span style="font-size:0.8rem; color:#6366f1; font-weight:700;">★ Solar Axis / சூரிய மார்க்கம்</span>
+                    </div>
+                    <div style="font-size:1.35rem; font-weight:800; color:var(--text-primary); font-family:var(--font-serif);">
+                        ${p.surya_veedhi.veedhi_sign_name_ta} வீதி <span style="font-size:1.05rem; font-weight:600; color:var(--text-secondary);">(${p.surya_veedhi.veedhi_sign_name_en})</span>
+                    </div>
+                    <div style="font-size:0.88rem; color:#4338ca; font-weight:700; margin-top:2px;">
+                        Sun in ${p.surya_veedhi.sun_sign_name_ta} (${p.surya_veedhi.sun_sign_name_en})
+                    </div>
+                </div>
+                <div style="margin-top:12px; font-size:0.82rem; background:rgba(0,0,0,0.03); padding:8px 10px; border-radius:6px; line-height:1.5;">
+                    <div><strong>Axis / மார்க்கம்:</strong> ${p.surya_veedhi.name_ta}</div>
+                    <div><strong>Rule / விதி:</strong> 4 மாதங்களுக்கு ஒரு வீதி வீதம் ஆண்டுக்கு 3 வீதிகள்</div>
+                    <div><strong>Sunrise / உதயம்:</strong> ${data.query_metadata?.sunrise || "--"} • <strong>Sunset / அஸ்தமனம்:</strong> ${data.query_metadata?.sunset || "--"}</div>
+                </div>
+                <div style="margin-top:8px; font-size:0.82rem; color:var(--text-secondary); line-height:1.45; font-style:italic;">
+                    சூரிய சஞ்சாரப் பாதையின்படி கவிப்பு கணக்கீட்டிற்கான மூல அச்சாகும்.
+                </div>
+            </div>
+
+            <!-- Pillar 4: Kavippu -->
+            <div class="jamakkol-pillar-card" style="border-left: 5px solid #ef4444;">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <span style="font-size:0.8rem; background:#fef2f2; color:#991b1b; font-weight:800; padding:2px 8px; border-radius:12px;">4. KAVIPPU / கவிப்பு</span>
+                        <span style="font-size:0.8rem; color:#ef4444; font-weight:700;">★ Obstruction / மறைவுத் தடை</span>
+                    </div>
+                    <div style="font-size:1.35rem; font-weight:800; color:var(--text-primary); font-family:var(--font-serif);">
+                        ${p.kavippu.sign_name_ta} <span style="font-size:1.05rem; font-weight:600; color:var(--text-secondary);">(${p.kavippu.sign_name_en})</span>
+                    </div>
+                    <div style="font-size:0.88rem; color:#b91c1c; font-weight:700; margin-top:2px;">
+                        H-${p.kavippu.bhava_from_udhayam} from Udhayam • H-${p.kavippu.bhava_from_arudam} from Arudam
+                    </div>
+                </div>
+                <div style="margin-top:12px; font-size:0.82rem; background:rgba(0,0,0,0.03); padding:8px 10px; border-radius:6px; line-height:1.5;">
+                    <div><strong>Formula / சூத்திரம்:</strong> (உதயம் + சூரிய வீதி - ஆருடம்) mod 12</div>
+                    <div><strong>Lord / அதிபதி:</strong> ${p.kavippu.lord_ta} (${p.kavippu.lord_en})</div>
+                    <div><strong>Nature / குணம்:</strong> ${p.kavippu.quality.ta} • ${p.kavippu.dmj.ta}</div>
+                </div>
+                <div style="margin-top:8px; font-size:0.82rem; color:var(--text-secondary); line-height:1.45; font-style:italic;">
+                    ${p.kavippu.description_ta}
+                </div>
+            </div>
+        `;
+    }
+
+    // 2. RENDER 8 JAAMAMS TIMELINE BAR
+    const timelineBar = document.getElementById("jaamamTimelineBar");
+    const activeBadge = document.getElementById("jaamamActiveBadge");
+    const timeRangeText = document.getElementById("jaamamTimeRangeText");
+
+    if (activeBadge) {
+        const periodText = j.is_night ? "Night / இரவுப் பொழுது" : "Day / பகல் பொழுது";
+        activeBadge.innerHTML = `
+            <span class="live-blink-dot" style="margin-right:6px;"></span>
+            ${periodText} • Active Jaamam ${j.active_jaamam_number} (${j.active_jaamam_lord?.lord_name_ta})
+        `;
+    }
+    if (timeRangeText) {
+        timeRangeText.innerHTML = `
+            ${j.active_weekday_name_ta} (${j.active_weekday_name_en}) • Jaamam Duration: <strong>${j.jaamam_duration_minutes} mins</strong> (3.75 Nazhigai)
+        `;
+    }
+
+    if (timelineBar && j.all_jaamams) {
+        timelineBar.innerHTML = "";
+        j.all_jaamams.forEach(item => {
+            const card = document.createElement("div");
+            card.className = `jaamam-step-card ${item.is_active ? "active-jaamam" : ""}`;
+            card.innerHTML = `
+                <div class="jaamam-number" style="font-size:0.78rem; font-weight:700; color:var(--text-secondary);">
+                    Jaamam ${item.jaamam_number} ${item.is_active ? "★ ACTIVE" : ""}
+                </div>
+                <div style="font-size:0.96rem; font-weight:800; color:var(--gold-bright); margin:4px 0;">
+                    ${item.lord_short_ta}
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); white-space:nowrap;">
+                    ${item.start_time} - ${item.end_time}
+                </div>
+            `;
+            timelineBar.appendChild(card);
+        });
+    }
+
+    // 3. RENDER SOUTH INDIAN DUAL-RING MANDALA
+    const chakraGrid = document.getElementById("jamakkolChakraGrid");
+    if (chakraGrid && data.signs_grid) {
+        chakraGrid.innerHTML = "";
+
+        // South Indian 4x4 coordinate placement map:
+        // Row 1: Meena (11), Mesha (0), Rishaba (1), Mithuna (2)
+        // Row 2: Kumbha (10), Center, Kataka (3)
+        // Row 3: Makara (9), Center, Simha (4)
+        // Row 4: Dhanus (8), Vrischika (7), Thula (6), Kanni (5)
+        const cellOrder = [
+            11, 0, 1, 2,
+            10, -1, -1, 3,
+            9, -1, -1, 4,
+            8, 7, 6, 5
+        ];
+
+        let centerAppended = false;
+
+        cellOrder.forEach(signIdx => {
+            if (signIdx === -1) {
+                if (!centerAppended) {
+                    centerAppended = true;
+                    const centerBox = document.createElement("div");
+                    centerBox.className = "jamakkol-center-box";
+                    centerBox.innerHTML = `
+                        <div style="font-weight:900; color:var(--gold-bright); font-size:1.15rem; font-family:var(--font-serif);">
+                            சாமுக்கோள் ஆருடம்
+                        </div>
+                        <div style="font-size:0.85rem; color:#b45309; font-weight:700; margin-top:2px;">
+                            ${j.active_weekday_name_ta} • சாமம் ${j.active_jaamam_number}
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px;">
+                            Lord: <strong>${j.active_jaamam_lord?.lord_name_ta}</strong>
+                        </div>
+                        <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:2px;">
+                            ${data.query_metadata?.time || ""} • ${data.query_metadata?.place || ""}
+                        </div>
+                        <div style="margin-top:8px;">
+                            <span class="badge" style="background:#047857; color:#fff; font-size:0.78rem; padding:4px 8px; border-radius:12px;">
+                                ${pred.kariya_siddhi_score}% • ${pred.kariya_siddhi_verdict_ta.split(' ')[0]}
+                            </span>
+                        </div>
+                    `;
+                    chakraGrid.appendChild(centerBox);
+                }
+                return;
+            }
+
+            const signData = data.signs_grid[signIdx];
+            if (!signData) return;
+
+            const isUdhayam = (signIdx === p.udhayam.sign_idx);
+            const isArudam = (signIdx === p.arudam.sign_idx);
+            const isKavippu = (signIdx === p.kavippu.sign_idx);
+            const isSuryaVeedhi = (signIdx === p.surya_veedhi.veedhi_sign);
+
+            let extraClasses = "";
+            if (isUdhayam) extraClasses += " cell-udhayam";
+            if (isArudam) extraClasses += " cell-arudam";
+            if (isKavippu) extraClasses += " cell-kavippu";
+            if (isSuryaVeedhi) extraClasses += " cell-surya-veedhi";
+
+            const cell = document.createElement("div");
+            cell.className = `jamakkol-cell ${extraClasses}`;
+            cell.title = `Click to set Arudam to ${signData.sign_name_ta} (${signData.sign_name_en})`;
+            cell.onclick = () => setJamakkolArudam(signIdx);
+
+            // Outer zone (Jama Grahas)
+            let outerHtml = "";
+            if (signData.is_fixed_sign) {
+                outerHtml = `<span style="font-size:0.68rem; color:var(--text-secondary); opacity:0.6;">✕ ஸ்திரம்</span>`;
+            } else if (signData.jama_planets && signData.jama_planets.length > 0) {
+                outerHtml = signData.jama_planets.map(jg => `
+                    <span class="jama-graha-badge" title="Jama Graha: ${jg.name_en}">
+                        ☸ ${jg.short_ta}
+                    </span>
+                `).join(" ");
+            }
+
+            // Inner zone (Transit Grahas)
+            let innerHtml = "";
+            if (signData.inner_planets && signData.inner_planets.length > 0) {
+                innerHtml = signData.inner_planets.map(ip => `
+                    <span class="transit-graha-pill" title="${ip.name_en} ${ip.deg_in_sign_dms}">
+                        ${ip.name_ta} ${ip.deg_in_sign_dms.split(':')[0]}°
+                    </span>
+                `).join(" ");
+            }
+
+            // Key badges
+            let badgesHtml = "";
+            if (isUdhayam) badgesHtml += `<strong style="color:#f59e0b; font-size:0.75rem;">[உத]</strong> `;
+            if (isArudam) badgesHtml += `<strong style="color:#10b981; font-size:0.75rem;">[ஆரு]</strong> `;
+            if (isKavippu) badgesHtml += `<strong style="color:#ef4444; font-size:0.75rem;">[கவி]</strong> `;
+            if (isSuryaVeedhi) badgesHtml += `<strong style="color:#6366f1; font-size:0.75rem;">[சூ.வீ]</strong> `;
+
+            cell.innerHTML = `
+                <!-- Outer Ring Zone: Jama Graha -->
+                <div style="display:flex; justify-content:space-between; align-items:center; min-height:18px;">
+                    <div>${outerHtml}</div>
+                    <div style="font-size:0.72rem; color:var(--text-secondary); font-weight:700;">${signIdx + 1}</div>
+                </div>
+
+                <!-- Sign Label -->
+                <div style="text-align:center; margin:4px 0;">
+                    <div style="font-weight:800; font-size:0.86rem; color:var(--text-primary);">
+                        ${signData.sign_name_ta}
+                    </div>
+                    <div style="font-size:0.72rem; color:var(--text-secondary);">
+                        ${signData.sign_name_en}
+                    </div>
+                </div>
+
+                <!-- Inner Ring Zone: Transit Grahas & Markers -->
+                <div style="min-height:22px; display:flex; flex-direction:column; gap:2px;">
+                    <div style="display:flex; flex-wrap:wrap; gap:3px;">
+                        ${innerHtml}
+                    </div>
+                    <div style="text-align:right;">
+                        ${badgesHtml}
+                    </div>
+                </div>
+            `;
+
+            chakraGrid.appendChild(cell);
+        });
+    }
+
+    // 4. RENDER KARIYA SIDDHI VERDICT BOX
+    const verdictBox = document.getElementById("jamakkolVerdictBox");
+    if (verdictBox) {
+        let badgeColor = "#047857";
+        let badgeBg = "#ecfdf5";
+        if (pred.kariya_siddhi_score < 40) {
+            badgeColor = "#b91c1c";
+            badgeBg = "#fef2f2";
+        } else if (pred.kariya_siddhi_score < 55) {
+            badgeColor = "#b45309";
+            badgeBg = "#fef3c7";
+        }
+
+        const reasonsList = (pred.reasons_ta || []).map((r, i) => `
+            <li style="margin-bottom:6px; font-size:0.9rem; line-height:1.55; color:var(--text-primary); font-weight:500;">
+                ${r} <span style="font-size:0.82rem; color:var(--text-secondary); display:block;">${pred.reasons_en[i] || ""}</span>
+            </li>
+        `).join("");
+
+        verdictBox.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+                <div style="font-weight:800; color:var(--gold-bright); font-size:1.15rem; font-family:var(--font-serif);">
+                    🎯 Kariya Siddhi Verdict / காரிய சித்தி பலன் தீர்ப்பு
+                </div>
+                <div style="background:${badgeBg}; color:${badgeColor}; font-weight:800; font-size:0.95rem; padding:4px 14px; border-radius:14px; border:1px solid ${badgeColor};">
+                    ${pred.kariya_siddhi_score}% Success Likelihood
+                </div>
+            </div>
+
+            <!-- Progress Meter -->
+            <div style="background:var(--border-color); height:12px; border-radius:6px; overflow:hidden; margin-bottom:16px;">
+                <div style="width:${pred.kariya_siddhi_score}%; height:100%; background:linear-gradient(90deg, #f59e0b, #10b981); transition:width 0.8s ease;"></div>
+            </div>
+
+            <div style="background:rgba(217, 119, 6, 0.08); border-left:4.5px solid #d97706; padding:12px 16px; border-radius:6px; margin-bottom:16px;">
+                <div style="font-weight:800; font-size:1.05rem; color:#92400e; margin-bottom:4px;">
+                    ${pred.kariya_siddhi_verdict_ta}
+                </div>
+                <div style="font-size:0.88rem; color:var(--text-secondary); font-weight:600;">
+                    ${pred.kariya_siddhi_verdict_en}
+                </div>
+            </div>
+
+            <div style="font-size:0.88rem; font-weight:700; color:var(--text-primary); margin-bottom:8px;">
+                Astrological Factors (ஜோதிட காரணங்கள்):
+            </div>
+            <ul style="padding-left:18px; margin:0;">
+                ${reasonsList}
+            </ul>
+        `;
+    }
+
+    // 5. RENDER KAVIPPU OBSTRUCTION ANALYSIS
+    const kavippuBox = document.getElementById("jamakkolKavippuAnalysisBox");
+    if (kavippuBox) {
+        const affInner = pred.afflicted_by_kavippu?.inner_planets?.length > 0
+            ? pred.afflicted_by_kavippu.inner_planets.join(", ")
+            : "None (நேரடி கிரக பாதிப்பு இல்லை)";
+        const affJama = pred.afflicted_by_kavippu?.jama_planets?.length > 0
+            ? pred.afflicted_by_kavippu.jama_planets.join(", ")
+            : "None";
+
+        kavippuBox.innerHTML = `
+            <div style="font-weight:800; color:#ef4444; font-size:1.08rem; font-family:var(--font-serif); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                <span>🛡️</span> Kavippu Obstruction Analysis / கவிப்பு தோஷ & மறைவு ஆய்வு
+            </div>
+            <div style="font-size:0.9rem; color:var(--text-primary); line-height:1.6; font-weight:500;">
+                கவிப்பு புள்ளி <strong>${p.kavippu.sign_name_ta} (${p.kavippu.sign_name_en})</strong> ராசியில் அமைந்துள்ளது.
+                இது உதயத்திற்கு <strong>${pred.bhava_kavippu_from_udhayam}ம் பாவகம்</strong> மற்றும் ஆருடத்திற்கு <strong>${pred.bhava_kavippu_from_arudam}ம் பாவகம்</strong> ஆகும்.
+            </div>
+            <div style="margin-top:12px; background:rgba(239, 68, 68, 0.08); border-left:4px solid #ef4444; padding:10px 14px; border-radius:6px; font-size:0.86rem;">
+                <div><strong>Afflicted Transit Planets / கவிப்பில் உள்ள கோள்கள்:</strong> ${affInner}</div>
+                <div style="margin-top:4px;"><strong>Afflicted Jama Planets / கவிப்பில் உள்ள சாமக்கோள்கள்:</strong> ${affJama}</div>
+            </div>
+            <div style="margin-top:10px; font-size:0.84rem; color:var(--text-secondary); line-height:1.5; font-style:italic;">
+                விளக்கம்: கவிப்பு நிற்கும் பாவகத்திற்குரிய விஷயங்கள் மறைக்கப்படலாம் அல்லது ஆரம்ப தடைகளை சந்திக்கலாம்.
+            </div>
+        `;
+    }
+
+    // 6. RENDER DHATU MOOLA JEEVA BOX
+    const dmjBox = document.getElementById("jamakkolDmjBox");
+    if (dmjBox) {
+        dmjBox.innerHTML = `
+            <div style="font-weight:800; color:var(--gold-bright); font-size:1.02rem; font-family:var(--font-serif); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                <span>🌿</span> Question Nature / தாது - மூல - ஜீவ நிர்ணயம்
+            </div>
+            <div style="font-size:0.88rem; color:var(--text-primary); line-height:1.55; margin-bottom:10px;">
+                பாடம் 13-14 விதிப்படி கேள்வி கேட்கப்பட்ட பொருள் அல்லது நபரின் தன்மையை அறியும் முறை:
+            </div>
+            <div style="font-size:0.84rem; background:rgba(0,0,0,0.03); padding:10px 12px; border-radius:6px; line-height:1.6;">
+                <div>• <strong>Udhayam (உதயம்):</strong> ${pred.udhayam_dmj.ta} (${pred.udhayam_dmj.en})</div>
+                <div>• <strong>Arudam (ஆருடம்):</strong> ${pred.arudam_dmj.ta} (${pred.arudam_dmj.en})</div>
+                <div>• <strong>Kavippu (கவிப்பு):</strong> ${pred.kavippu_dmj.ta} (${pred.kavippu_dmj.en})</div>
+            </div>
+            <div style="margin-top:10px; font-size:0.84rem; color:var(--text-secondary); line-height:1.5;">
+                <strong>சுருக்கம்:</strong> ${pred.dmj_summary_ta}
+            </div>
+        `;
+    }
+
+    // 7. RENDER TIMING BOX (KALA NIRNAYAM)
+    const timingBox = document.getElementById("jamakkolTimingBox");
+    if (timingBox && pred.timing_analysis) {
+        const t = pred.timing_analysis;
+        timingBox.innerHTML = `
+            <div style="font-weight:800; color:#0284c7; font-size:1.02rem; font-family:var(--font-serif); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                <span>⏳</span> Fruition Timing / கால நிர்ணய கணிதம்
+            </div>
+            <div style="font-size:0.88rem; color:var(--text-primary); line-height:1.55; margin-bottom:10px;">
+                பாடம் 10-ல் குறிப்பிடப்பட்டுள்ள பாரம்பரிய சந்திரன்-உதய காலக் கணித முறை:
+            </div>
+            <div style="font-size:0.84rem; background:rgba(2, 132, 199, 0.08); border-left:4px solid #0284c7; padding:10px 12px; border-radius:6px; line-height:1.6;">
+                <div>• <strong>Moon to Udhayam Distance:</strong> ${t.moon_distance_houses} Houses (${t.estimated_days} Days)</div>
+                <div>• <strong>Arudam Lord Period:</strong> ${t.arudam_lord_time_unit_ta} (${t.arudam_lord_time_unit_en})</div>
+            </div>
+            <div style="margin-top:10px; font-size:0.86rem; color:#0369a1; font-weight:700; line-height:1.5;">
+                ${t.summary_ta}
+            </div>
+        `;
+    }
+
+    // 8. RENDER REMEDIES BOX
+    const remediesBox = document.getElementById("jamakkolRemediesBox");
+    if (remediesBox) {
+        remediesBox.innerHTML = `
+            <div style="font-weight:800; color:#059669; font-size:1.02rem; font-family:var(--font-serif); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                <span>🪔</span> Auspicious Direction & Remedies / வெற்றி திசை & பரிகாரம்
+            </div>
+            <div style="font-size:0.88rem; color:var(--text-primary); line-height:1.55; margin-bottom:10px;">
+                ஆருடத்தின் வழி காரிய வெற்றி பெறுவதற்கான திசை மற்றும் தெய்வ வழிபாடு:
+            </div>
+            <div style="font-size:0.84rem; background:rgba(16, 185, 129, 0.08); border-left:4px solid #059669; padding:10px 12px; border-radius:6px; line-height:1.6;">
+                <div>• <strong>வெற்றி திசை (Auspicious Direction):</strong> <strong>${pred.auspicious_direction_ta} (${pred.auspicious_direction_en})</strong></div>
+                <div>• <strong>காரிய அனுகூல திசை:</strong> பேச்சுவார்த்தை அல்லது முயற்சிக்கு இத்திசை நோக்கி அமர்வது நலம்.</div>
+                <div>• <strong>சாமுக்கோள் பரிகாரம்:</strong> சாம அதிபதியான <strong>${j.active_jaamam_lord?.lord_name_ta}</strong>க்குரிய தீபம் ஏற்றி வழிபட தடைகள் நீங்கி காரிய சித்தி உண்டாகும்.</div>
+            </div>
+        `;
     }
 }
