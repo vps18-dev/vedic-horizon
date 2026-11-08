@@ -4,10 +4,37 @@ Supports high-precision JPL ephemeris files (1800-2400 AD).
 """
 
 import os
+import re
 import math
 from datetime import datetime, date
 import swisseph as swe
 from jhora.panchanga import drik
+from jhora import utils
+
+# Monkeypatch utils.to_dms and utils.from_dms_str_to_dms to eliminate runaway Julian day offset strings (e.g. (+2451527))
+_orig_to_dms = utils.to_dms
+def _safe_to_dms(deg, as_string=True, is_lat_long=None, round_seconds_to_digits=None, round_to_minutes=None, use_24hour_format=None):
+    res = _orig_to_dms(deg, as_string=as_string, is_lat_long=is_lat_long, round_seconds_to_digits=round_seconds_to_digits, round_to_minutes=round_to_minutes, use_24hour_format=use_24hour_format)
+    if as_string and isinstance(res, str):
+        res = re.sub(r'\s*\([+-]?\d+\)', '', res).strip()
+    return res
+utils.to_dms = _safe_to_dms
+
+_orig_from_dms_str_to_dms = utils.from_dms_str_to_dms
+def _safe_from_dms_str_to_dms(dms_str):
+    s = str(dms_str)
+    dmsh = 0
+    if '+1' in s:
+        dmsh = 24
+    elif '-1' in s:
+        dmsh = -24
+    clean = re.sub(r'\s*\([+-]?\d+\)', '', s).replace(' AM', '').replace(' PM', '').strip()
+    parts = [int(p) for p in clean.split(':') if p.isdigit()]
+    h = parts[0] if len(parts) > 0 else 0
+    m = parts[1] if len(parts) > 1 else 0
+    sec = parts[2] if len(parts) > 2 else 0
+    return dmsh + h, m, sec
+utils.from_dms_str_to_dms = _safe_from_dms_str_to_dms
 
 # Monkeypatch drik.vaara to allow place=None (fixes PyPI PyJHora bug in main.py)
 _orig_drik_vaara = drik.vaara
@@ -49,6 +76,14 @@ def _safe_drik_moonset(jd, place):
     time_str = str(res[1]).split('(')[0].strip()
     return [lt, time_str, res[2]]
 drik.moonset = _safe_drik_moonset
+
+# Also patch drik1 if present
+try:
+    import jhora.panchanga.drik1 as drik1
+    drik1.sunrise = _safe_drik_sunrise
+    drik1.sunset = _safe_drik_sunset
+except Exception:
+    pass
 
 # Monkeypatch drik.upagraha_longitude to safely use float hours and avoid fragile string splitting
 _orig_upagraha_longitude = drik.upagraha_longitude
@@ -306,11 +341,11 @@ class VedicHoroscopeEngine:
             swe.set_sid_mode(sid_mode)
         
         # Parse time safely
-        clean_time = str(birth_time_str).upper().replace('AM', '').replace('PM', '').strip()
+        clean_time = re.sub(r'\s*\([+-]?\d+\)', '', str(birth_time_str)).upper().replace('AM', '').replace('PM', '').strip()
         time_parts = [int(p) for p in clean_time.split(':') if p.isdigit()]
-        h = time_parts[0] if len(time_parts) > 0 else 6
-        m = time_parts[1] if len(time_parts) > 1 else 30
-        s = time_parts[2] if len(time_parts) > 2 else 0
+        h = max(0, min(23, time_parts[0])) if len(time_parts) > 0 else 6
+        m = max(0, min(59, time_parts[1])) if len(time_parts) > 1 else 30
+        s = max(0, min(59, time_parts[2])) if len(time_parts) > 2 else 0
         self.time_tuple = (h, m, s)
         self.hour_float = h + m / 60.0 + s / 3600.0
 
@@ -724,7 +759,16 @@ class VedicHoroscopeEngine:
             dl_name = GRAHAS[dl_idx]["name"]
             bl_name = GRAHAS[bl_idx]["name"]
 
-            dt_start = date(int(start_date_tuple[0]), int(start_date_tuple[1]), int(start_date_tuple[2]))
+            try:
+                y_str = re.sub(r'\D', '', str(start_date_tuple[0]))
+                m_str = re.sub(r'\D', '', str(start_date_tuple[1]))
+                d_str = re.sub(r'\D', '', str(start_date_tuple[2]))
+                y_val = int(y_str) if y_str else 2000
+                m_val = max(1, min(12, int(m_str))) if m_str else 1
+                d_val = max(1, min(28, int(d_str))) if d_str else 1
+                dt_start = date(y_val, m_val, d_val)
+            except Exception:
+                dt_start = date.today()
 
             if dl_name not in maha_dict:
                 maha_dict[dl_name] = {

@@ -1,9 +1,37 @@
 import os
+import re
 from datetime import date, datetime
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import jhora.panchanga.drik as drik
 import swisseph as swe
+from jhora import utils
+
+# Monkeypatch utils.to_dms and utils.from_dms_str_to_dms to eliminate runaway Julian day offset strings (e.g. (+2451527))
+_orig_to_dms = utils.to_dms
+def _safe_to_dms(deg, as_string=True, is_lat_long=None, round_seconds_to_digits=None, round_to_minutes=None, use_24hour_format=None):
+    res = _orig_to_dms(deg, as_string=as_string, is_lat_long=is_lat_long, round_seconds_to_digits=round_seconds_to_digits, round_to_minutes=round_to_minutes, use_24hour_format=use_24hour_format)
+    if as_string and isinstance(res, str):
+        res = re.sub(r'\s*\([+-]?\d+\)', '', res).strip()
+    return res
+utils.to_dms = _safe_to_dms
+
+_orig_from_dms_str_to_dms = utils.from_dms_str_to_dms
+def _safe_from_dms_str_to_dms(dms_str):
+    s = str(dms_str)
+    dmsh = 0
+    if '+1' in s:
+        dmsh = 24
+    elif '-1' in s:
+        dmsh = -24
+    clean = re.sub(r'\s*\([+-]?\d+\)', '', s).replace(' AM', '').replace(' PM', '').strip()
+    parts = [int(p) for p in clean.split(':') if p.isdigit()]
+    h = parts[0] if len(parts) > 0 else 0
+    m = parts[1] if len(parts) > 1 else 0
+    sec = parts[2] if len(parts) > 2 else 0
+    return dmsh + h, m, sec
+utils.from_dms_str_to_dms = _safe_from_dms_str_to_dms
+
 # Monkeypatch drik.vaara to allow place=None (fixes PyPI PyJHora bug in main.py)
 _orig_drik_vaara = drik.vaara
 def _safe_drik_vaara(jd, place=None, show_vedic_day=True):
@@ -44,6 +72,14 @@ def _safe_drik_moonset(jd, place):
     time_str = str(res[1]).split('(')[0].strip()
     return [lt, time_str, res[2]]
 drik.moonset = _safe_drik_moonset
+
+# Also patch drik1 if present
+try:
+    import jhora.panchanga.drik1 as drik1
+    drik1.sunrise = _safe_drik_sunrise
+    drik1.sunset = _safe_drik_sunset
+except Exception:
+    pass
 
 # Monkeypatch drik.upagraha_longitude to safely use float hours and avoid fragile string splitting
 _orig_upagraha_longitude = drik.upagraha_longitude
@@ -150,32 +186,31 @@ def parse_date_robustly(date_str, default_date=None):
         default_date = date(1995, 8, 20)
     if not date_str:
         return default_date
-    date_str = str(date_str).strip()
-    if '-' in date_str:
-        parts = [int(p) for p in date_str.split('-') if p.isdigit()]
-        if len(parts) == 3:
-            if parts[0] > 31:
-                return date(parts[0], parts[1], parts[2])
-            else:
-                return date(parts[2], parts[1], parts[0])
-    if '/' in date_str:
-        parts = [int(p) for p in date_str.split('/') if p.isdigit()]
-        if len(parts) == 3:
-            if parts[0] > 31:
-                return date(parts[0], parts[1], parts[2])
-            elif parts[2] > 31:
-                if parts[0] > 12:
-                    return date(parts[2], parts[1], parts[0])
-                elif parts[1] > 12:
-                    return date(parts[2], parts[0], parts[1])
-                else:
-                    try:
-                        return date(parts[2], parts[1], parts[0])
-                    except Exception:
-                        return date(parts[2], parts[0], parts[1])
     try:
+        date_str = str(date_str).strip()
+        if '-' in date_str or '/' in date_str or '.' in date_str:
+            parts = [int(p) for p in re.split(r'[-/.]', date_str) if p.isdigit()]
+            if len(parts) == 3:
+                if parts[0] > 31:  # YYYY-MM-DD
+                    y, m, d = parts[0], parts[1], parts[2]
+                elif parts[2] > 31:  # DD-MM-YYYY or MM-DD-YYYY
+                    if parts[0] > 12:
+                        d, m, y = parts[0], parts[1], parts[2]
+                    elif parts[1] > 12:
+                        m, d, y = parts[0], parts[1], parts[2]
+                    else:
+                        d, m, y = parts[0], parts[1], parts[2]
+                else:
+                    d, m, y = parts[0], parts[1], parts[2]
+                m = max(1, min(12, m))
+                d = max(1, min(31, d))
+                try:
+                    return date(y, m, d)
+                except ValueError:
+                    d = 28
+                    return date(y, m, d)
         from dateutil import parser
-        return parser.parse(date_str).date()
+        return parser.parse(date_str, dayfirst=True).date()
     except Exception:
         return default_date
 
