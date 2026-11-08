@@ -22,7 +22,7 @@ jobs:
 
       - name: Accept Android SDK Licenses
         run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
@@ -35,12 +35,17 @@ jobs:
           ANDROID_HOME: /usr/local/lib/android/sdk
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+          mkdir -p ../dist
+          echo "=== Searching for generated APKs ==="
+          find . -name "*.apk" -print -exec cp -v {} ../dist/ \;
+          echo "=== Content of dist directory ==="
+          ls -la ../dist/
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: VedicHorizon-v1.0-Debug-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: dist/*.apk
           if-no-files-found: error
           retention-days: 30
