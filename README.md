@@ -1,4 +1,4 @@
-# Vedic Horizon (ज्योतिष) — Vedic Astrology Web Application
+# Vedic Horizon (வேத ஜோதிடம்) — Vedic Astrology Web & Android Application
 
 A full-featured, aesthetic Vedic astrology web application powered by **PyJHora** conventions and **Swiss Ephemeris** high-precision JPL numerical integration.
 

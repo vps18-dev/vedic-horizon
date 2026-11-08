@@ -6,6 +6,12 @@
     <title>Vedic Horizon (வேத ஜோதிடம்) - Vedic Astrology & Swiss Ephemeris Engine</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☸</text></svg>">
+    <meta name="theme-color" content="#692305">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
 </head>
 <body data-theme="pleasant-vedic">
 
@@ -935,5 +941,17 @@
     <script src="js/icons.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/app.js"></script>
+    <!-- Service Worker Registration for PWA / Android -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then((reg) => {
+                    console.log('Vedic Horizon PWA Service Worker Registered', reg.scope);
+                }).catch((err) => {
+                    console.log('Service Worker registration error:', err);
+                });
+            });
+        }
+    </script>
 </body>
 </html>

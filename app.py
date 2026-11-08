@@ -205,6 +205,16 @@ def add_header(response):
 def index():
     return send_from_directory(app.static_folder, "index.html")
 
+@app.route("/manifest.json")
+def manifest():
+    return send_from_directory(app.static_folder, "manifest.json", mimetype="application/manifest+json")
+
+@app.route("/sw.js")
+def service_worker():
+    response = send_from_directory(app.static_folder, "sw.js", mimetype="application/javascript")
+    response.headers["Service-Worker-Allowed"] = "/"
+    return response
+
 @app.route("/api/status", methods=["GET"])
 def get_status():
     ephe_files = os.listdir(EPHE_DIR) if os.path.exists(EPHE_DIR) else []

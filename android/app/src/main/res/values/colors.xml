@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#692305</color>
+    <color name="primary_dark">#4A1803</color>
+    <color name="accent_gold">#D4AF37</color>
+    <color name="gold_light">#FFD700</color>
+    <color name="background_vedic">#FFF9F2</color>
+    <color name="surface_cream">#FFFDF9</color>
+    <color name="text_primary">#2D1810</color>
+    <color name="text_secondary">#7A5C50</color>
+    <color name="error_red">#B91C1C</color>
+    <color name="white">#FFFFFF</color>
+</resources>
